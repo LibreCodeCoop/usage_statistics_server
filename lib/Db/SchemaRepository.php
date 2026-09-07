@@ -29,28 +29,30 @@ final readonly class SchemaRepository {
         return is_array($decoded) ? $decoded : null;
     }
 
-    public function store(string $application, int $schemaVersion, array $definition): void {
-        $encoded = json_encode($definition, JSON_THROW_ON_ERROR);
-
-        if ($this->find($application, $schemaVersion) !== null) {
-            $qb = $this->db->getQueryBuilder();
-            $qb->update('usage_stats_schemas')
-                ->set('definition', $qb->createNamedParameter($encoded))
-                ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
-                ->andWhere($qb->expr()->eq('schema_version', $qb->createNamedParameter($schemaVersion, IQueryBuilder::PARAM_INT)))
-                ->executeStatement();
-            return;
+    /**
+     * @return bool true when created, false when the same definition already exists
+     * @throws \LogicException when the version already exists with a different definition
+     */
+    public function store(string $application, int $schemaVersion, array $definition): bool {
+        $existing = $this->find($application, $schemaVersion);
+        if ($existing !== null) {
+            if ($existing === $definition) {
+                return false;
+            }
+            throw new \LogicException('Schema version already exists with a different definition.');
         }
 
         $qb = $this->db->getQueryBuilder();
         $qb->insert('usage_stats_schemas')->values([
             'application' => $qb->createNamedParameter($application),
             'schema_version' => $qb->createNamedParameter($schemaVersion, IQueryBuilder::PARAM_INT),
-            'definition' => $qb->createNamedParameter($encoded),
+            'definition' => $qb->createNamedParameter(json_encode($definition, JSON_THROW_ON_ERROR)),
             'created_at' => $qb->createNamedParameter(
                 new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
                 IQueryBuilder::PARAM_DATETIME_IMMUTABLE,
             ),
         ])->executeStatement();
+
+        return true;
     }
 }
