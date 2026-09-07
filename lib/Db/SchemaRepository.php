@@ -84,8 +84,8 @@ final readonly class SchemaRepository {
             ->executeQuery();
 
         $definitions = [];
-        foreach ($result->iterateColumn() as $definition) {
-            $decoded = $this->decodeDefinition($definition);
+        foreach ($result->iterateAssociative() as $row) {
+            $decoded = $this->decodeDefinition($row['definition'] ?? null);
             if ($decoded !== null) {
                 $definitions[] = $decoded;
             }
