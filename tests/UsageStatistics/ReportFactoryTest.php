@@ -11,12 +11,16 @@ use PHPUnit\Framework\TestCase;
 
 final class ReportFactoryTest extends TestCase
 {
-    public function testBuildsValidReport(): void
+    public function testBuildsValidReportAndNormalizesPeriodToUtc(): void
     {
-        $report = (new ReportFactory())->fromPayload($this->validPayload());
+        $payload = self::payload();
+        $payload['period']['start'] = '2026-07-31T21:00:00-03:00';
+
+        $report = (new ReportFactory())->fromPayload($payload);
 
         self::assertSame('libresign', $report->application);
         self::assertSame('installation-1', $report->installationId);
+        self::assertSame('2026-08-01T00:00:00+00:00', $report->periodStart->format(DATE_ATOM));
         self::assertCount(2, $report->metrics);
     }
 
@@ -46,11 +50,6 @@ final class ReportFactoryTest extends TestCase
         $duplicateMetric = $base;
         $duplicateMetric['metrics'][] = $duplicateMetric['metrics'][0];
         yield 'duplicate metric' => [$duplicateMetric];
-    }
-
-    private function validPayload(): array
-    {
-        return self::payload();
     }
 
     private static function payload(): array

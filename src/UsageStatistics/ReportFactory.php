@@ -122,7 +122,7 @@ final class ReportFactory
         }
 
         try {
-            return new \DateTimeImmutable($value);
+            return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\Exception) {
             throw new InvalidReport(sprintf('%s must be an RFC 3339 timestamp.', $field));
         }
