@@ -4,7 +4,7 @@ The administrative API exposes aggregated usage statistics to authenticated Next
 
 All endpoints use the OCS namespace of the `usage_statistics_server` app.
 
-The API intentionally exposes aggregates rather than individual installation reports. Raw reports remain internal so later privacy thresholds and abuse filtering can be applied without changing the public contract.
+The API intentionally exposes aggregates rather than individual installation reports. Normalized reports remain internal so later privacy thresholds and abuse filtering can be applied without changing the public contract. The server does not retain the arbitrary raw JSON request body after validation.
 
 ## Summary
 
@@ -113,9 +113,9 @@ This app differs intentionally in important areas:
 
 - historical reports are preserved instead of replacing the previous report from an installation;
 - latest installation state is materialized separately from report history;
-- metrics are explicitly typed by the protocol;
+- metrics are explicitly typed by the protocol and stored in typed columns;
 - application schemas are versioned;
-- raw report values are not exposed through the administrative statistics API.
+- individual report values are not exposed through the administrative statistics API.
 
 ## Interpretation
 
