@@ -17,8 +17,7 @@ jobs:
   matrix:
     runs-on: ubuntu-latest
     outputs:
-      php-version: ${{ steps.versions.outputs.php-available-list }}
-      server-max: ${{ steps.versions.outputs.branches-max-list }}
+      matrix: ${{ steps.versions.outputs.sparse-matrix }}
 
     steps:
       - name: Checkout app
@@ -60,9 +59,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        php-versions: ${{ fromJson(needs.matrix.outputs.php-version) }}
-        server-versions: ${{ fromJson(needs.matrix.outputs.server-max) }}
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
 
     env:
       APP_NAME: usage_statistics_server
