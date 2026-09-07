@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace OCA\UsageStatisticsServer\Controller;
 
 use OCA\UsageStatisticsServer\Db\ReportRepository;
+use OCA\UsageStatisticsServer\Db\SchemaRepository;
 use OCA\UsageStatisticsServer\Service\InvalidReport;
 use OCA\UsageStatisticsServer\Service\ReportFactory;
+use OCA\UsageStatisticsServer\Service\SchemaValidator;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AnonRateLimit;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -21,6 +23,8 @@ final class ReportController extends OCSController {
         IRequest $request,
         private readonly ReportFactory $factory,
         private readonly ReportRepository $repository,
+        private readonly SchemaRepository $schemas,
+        private readonly SchemaValidator $schemaValidator,
     ) {
         parent::__construct($appName, $request);
     }
@@ -34,7 +38,14 @@ final class ReportController extends OCSController {
             if (!is_array($payload)) {
                 throw new InvalidReport('Request body must be a JSON object.');
             }
+
             $report = $this->factory->fromPayload($payload);
+            $schema = $this->schemas->find($report->application, $report->schemaVersion);
+            if ($schema === null) {
+                throw new InvalidReport('Application schema is not registered.');
+            }
+            $this->schemaValidator->validateReport($report, $schema);
+
             $stored = $this->repository->store($report, $payload);
         } catch (InvalidReport|\JsonException $e) {
             return new DataResponse(['error' => 'invalid_report', 'message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
