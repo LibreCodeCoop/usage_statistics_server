@@ -27,8 +27,23 @@ final readonly class SchemaRepository {
             return null;
         }
 
-        $decoded = json_decode((string)$definition, true, 512, JSON_THROW_ON_ERROR);
-        return is_array($decoded) ? $decoded : null;
+        return $this->decodeDefinition($definition);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function findMetric(string $application, string $category, string $key): ?array {
+        foreach ($this->findAll($application) as $definition) {
+            foreach ($definition['metrics'] ?? [] as $metric) {
+                if (!is_array($metric)) {
+                    continue;
+                }
+                if (($metric['category'] ?? null) === $category && ($metric['key'] ?? null) === $key) {
+                    return $metric;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -44,6 +59,8 @@ final readonly class SchemaRepository {
             throw new \LogicException('Schema version already exists with a different definition.');
         }
 
+        $this->assertMetricCompatibility($application, $definition);
+
         $qb = $this->db->getQueryBuilder();
         $qb->insert('usage_stats_schemas')->values([
             'application' => $qb->createNamedParameter($application),
@@ -55,6 +72,63 @@ final readonly class SchemaRepository {
         ])->executeStatement();
 
         return true;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function findAll(string $application): array {
+        $qb = $this->db->getQueryBuilder();
+        $result = $qb->select('definition')
+            ->from('usage_stats_schemas')
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
+            ->orderBy('schema_version', 'ASC')
+            ->executeQuery();
+
+        $definitions = [];
+        foreach ($result->iterateColumn() as $definition) {
+            $decoded = $this->decodeDefinition($definition);
+            if ($decoded !== null) {
+                $definitions[] = $decoded;
+            }
+        }
+
+        return $definitions;
+    }
+
+    /** @param array<string,mixed> $definition */
+    private function assertMetricCompatibility(string $application, array $definition): void {
+        $existingMetrics = [];
+        foreach ($this->findAll($application) as $existingDefinition) {
+            foreach ($existingDefinition['metrics'] ?? [] as $metric) {
+                if (!is_array($metric)) {
+                    continue;
+                }
+                $identity = ($metric['category'] ?? '') . ':' . ($metric['key'] ?? '');
+                $existingMetrics[$identity] = $metric;
+            }
+        }
+
+        foreach ($definition['metrics'] ?? [] as $metric) {
+            if (!is_array($metric)) {
+                continue;
+            }
+            $identity = ($metric['category'] ?? '') . ':' . ($metric['key'] ?? '');
+            $existing = $existingMetrics[$identity] ?? null;
+            if (!is_array($existing)) {
+                continue;
+            }
+
+            foreach (['type', 'kind', 'aggregation'] as $field) {
+                if (($existing[$field] ?? null) !== ($metric[$field] ?? null)) {
+                    throw new \LogicException("Metric {$identity} changes {$field}; use a new metric key for incompatible semantics.");
+                }
+            }
+        }
+    }
+
+    /** @return array<string,mixed>|null */
+    private function decodeDefinition(mixed $definition): ?array {
+        $decoded = json_decode((string)$definition, true, 512, JSON_THROW_ON_ERROR);
+        return is_array($decoded) ? $decoded : null;
     }
 
     private function formatDateTime(\DateTimeImmutable $dateTime): string {
