@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\UsageStatistics\InvalidReport;
 use App\UsageStatistics\ReportFactory;
 use App\UsageStatistics\ReportRepository;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -26,7 +27,7 @@ final readonly class ReportController
             $payload = $request->toArray();
             $report = $this->factory->fromPayload($payload);
             $stored = $this->repository->store($report, $payload);
-        } catch (InvalidReport|\JsonException $exception) {
+        } catch (InvalidReport|JsonException $exception) {
             return new JsonResponse([
                 'error' => 'invalid_report',
                 'message' => $exception->getMessage(),
