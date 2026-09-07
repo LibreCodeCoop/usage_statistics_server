@@ -20,6 +20,8 @@ final readonly class ReportRepository {
             return ['id' => $existing, 'created' => false];
         }
 
+        $receivedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
         $this->db->beginTransaction();
         try {
             $qb = $this->db->getQueryBuilder();
@@ -30,7 +32,7 @@ final readonly class ReportRepository {
                 'schema_version' => $qb->createNamedParameter($report->schemaVersion, IQueryBuilder::PARAM_INT),
                 'period_start' => $qb->createNamedParameter($report->periodStart, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
                 'period_end' => $qb->createNamedParameter($report->periodEnd, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
-                'received_at' => $qb->createNamedParameter(new \DateTimeImmutable('now', new \DateTimeZone('UTC')), IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
+                'received_at' => $qb->createNamedParameter($receivedAt, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
                 'raw_payload' => $qb->createNamedParameter(json_encode($rawPayload, JSON_THROW_ON_ERROR)),
             ])->executeStatement();
             $reportId = $qb->getLastInsertId();
@@ -45,6 +47,22 @@ final readonly class ReportRepository {
                     'metric_value' => $metricQb->createNamedParameter(json_encode($metric->value, JSON_THROW_ON_ERROR)),
                 ])->executeStatement();
             }
+
+            $this->db->setValues(
+                'usage_stats_installations',
+                [
+                    'application' => $report->application,
+                    'installation_id' => $report->installationId,
+                ],
+                [
+                    'first_seen_at' => $receivedAt,
+                    'last_seen_at' => $receivedAt,
+                    'last_report_id' => $reportId,
+                ],
+                [
+                    'first_seen_at' => $receivedAt,
+                ],
+            );
 
             $this->db->commit();
             return ['id' => $reportId, 'created' => true];
