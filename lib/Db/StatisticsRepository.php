@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\UsageStatisticsServer\Db;
 
-use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 final readonly class StatisticsRepository {
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     public function __construct(private IDBConnection $db) {
     }
 
@@ -16,7 +17,7 @@ final readonly class StatisticsRepository {
         $result = $qb->select('COUNT(*) AS active_count')
             ->from('usage_stats_installations')
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
-            ->andWhere($qb->expr()->gte('last_seen_at', $qb->createNamedParameter($since, IQueryBuilder::PARAM_DATETIME_IMMUTABLE)))
+            ->andWhere($qb->expr()->gte('last_seen_at', $qb->createNamedParameter($this->formatDateTime($since))))
             ->executeQuery()
             ->fetchOne();
 
@@ -100,8 +101,8 @@ final readonly class StatisticsRepository {
             ->andWhere($qb->expr()->eq('m.category', $qb->createNamedParameter($category)))
             ->andWhere($qb->expr()->eq('m.metric_key', $qb->createNamedParameter($key)))
             ->andWhere($qb->expr()->isNotNull('m.numeric_value'))
-            ->andWhere($qb->expr()->gte('r.period_end', $qb->createNamedParameter($from, IQueryBuilder::PARAM_DATETIME_IMMUTABLE)))
-            ->andWhere($qb->expr()->lte('r.period_end', $qb->createNamedParameter($to, IQueryBuilder::PARAM_DATETIME_IMMUTABLE)))
+            ->andWhere($qb->expr()->gte('r.period_end', $qb->createNamedParameter($this->formatDateTime($from))))
+            ->andWhere($qb->expr()->lte('r.period_end', $qb->createNamedParameter($this->formatDateTime($to))))
             ->groupBy('r.period_start', 'r.period_end')
             ->orderBy('r.period_end', 'ASC')
             ->executeQuery();
@@ -121,5 +122,11 @@ final readonly class StatisticsRepository {
         $result->closeCursor();
 
         return $history;
+    }
+
+    private function formatDateTime(\DateTimeImmutable $dateTime): string {
+        return $dateTime
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format(self::DB_DATETIME_FORMAT);
     }
 }
