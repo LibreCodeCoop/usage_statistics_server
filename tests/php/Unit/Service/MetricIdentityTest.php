@@ -25,6 +25,7 @@ final class MetricIdentityTest extends TestCase {
     /** @return iterable<string,array{string,string,string,string}> */
     public static function distinctIdentityProvider(): iterable {
         yield 'colon moves from category to key' => ['a:b', 'c', 'a', 'b:c'];
+        yield 'separator must remain between parts' => ['a', 'bc', 'ab', 'c'];
         yield 'same category different key' => ['usage', 'a', 'usage', 'b'];
         yield 'different category same key' => ['usage', 'count', 'server', 'count'];
     }
