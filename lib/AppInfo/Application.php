@@ -8,6 +8,7 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use Override;
 
 final class Application extends App implements IBootstrap {
     public const APP_ID = 'usage_statistics_server';
@@ -16,9 +17,11 @@ final class Application extends App implements IBootstrap {
         parent::__construct(self::APP_ID);
     }
 
+    #[Override]
     public function register(IRegistrationContext $context): void {
     }
 
+    #[Override]
     public function boot(IBootContext $context): void {
     }
 }
