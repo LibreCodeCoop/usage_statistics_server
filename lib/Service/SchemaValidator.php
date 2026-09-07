@@ -39,10 +39,10 @@ final class SchemaValidator {
             $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', 128);
             $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', 512);
             $identity = MetricIdentity::fromParts($category, $key);
-            if (isset($seen[$identity])) {
+            if (array_key_exists($identity, $seen)) {
                 throw new InvalidReport('Duplicate schema metric.');
             }
-            $seen[$identity] = true;
+            $seen[$identity] = null;
 
             $type = $rawMetric['type'] ?? null;
             $kind = $rawMetric['kind'] ?? null;
@@ -99,26 +99,25 @@ final class SchemaValidator {
             if (!is_array($metric)) {
                 throw new InvalidReport('Invalid registered application schema.');
             }
+
             $identity = MetricIdentity::fromParts((string)($metric['category'] ?? ''), (string)($metric['key'] ?? ''));
             $allowed[$identity] = $metric;
             if (($metric['required'] ?? false) === true) {
-                $required[$identity] = true;
+                $required[] = $identity;
             }
         }
 
+        $reported = [];
         foreach ($report->metrics as $metric) {
             $identity = MetricIdentity::fromParts($metric->category, $metric->key);
             $schemaMetric = $allowed[$identity] ?? null;
-            if (!is_array($schemaMetric)) {
-                throw new InvalidReport('Report contains a metric that is not registered in the application schema.');
+            if (!is_array($schemaMetric) || ($schemaMetric['type'] ?? null) !== $metric->type) {
+                throw new InvalidReport('Report metric does not match the application schema.');
             }
-            if (($schemaMetric['type'] ?? null) !== $metric->type) {
-                throw new InvalidReport('Report metric type does not match the application schema.');
-            }
-            unset($required[$identity]);
+            $reported[] = $identity;
         }
 
-        if ($required !== []) {
+        if (array_diff($required, $reported) !== []) {
             throw new InvalidReport('Report is missing a required metric.');
         }
     }
