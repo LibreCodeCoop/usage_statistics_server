@@ -8,6 +8,7 @@ use OCA\UsageStatisticsServer\Service\InvalidReport;
 use OCA\UsageStatisticsServer\Service\Metric;
 use OCA\UsageStatisticsServer\Service\Report;
 use OCA\UsageStatisticsServer\Service\SchemaValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class SchemaValidatorTest extends TestCase {
@@ -75,6 +76,26 @@ final class SchemaValidatorTest extends TestCase {
 
         $this->expectException(InvalidReport::class);
         $this->validator->validateDefinition($definition);
+    }
+
+    #[DataProvider('unknownSchemaFieldProvider')]
+    public function testRejectsUnknownSchemaFields(string $scope): void {
+        $definition = $this->definition();
+
+        if ($scope === 'schema') {
+            $definition['unexpected'] = true;
+        } else {
+            $definition['metrics'][0]['unexpected'] = true;
+        }
+
+        $this->expectException(InvalidReport::class);
+        $this->validator->validateDefinition($definition);
+    }
+
+    /** @return iterable<string,array{string}> */
+    public static function unknownSchemaFieldProvider(): iterable {
+        yield 'schema' => ['schema'];
+        yield 'metric' => ['metric'];
     }
 
     /** @return array<string,mixed> */
