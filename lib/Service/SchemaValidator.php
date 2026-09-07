@@ -12,6 +12,11 @@ final class SchemaValidator {
 
     /** @return array<string,mixed> */
     public function validateDefinition(array $definition): array {
+        if (array_is_list($definition)) {
+            throw new InvalidReport('Schema definition must be an object.');
+        }
+        $this->assertAllowedKeys($definition, ['application', 'schemaVersion', 'metrics'], 'schema');
+
         $application = $this->identifier($definition['application'] ?? null, 'application', 128);
         $schemaVersion = $definition['schemaVersion'] ?? null;
         if (!is_int($schemaVersion) || $schemaVersion < 1) {
@@ -19,16 +24,17 @@ final class SchemaValidator {
         }
 
         $rawMetrics = $definition['metrics'] ?? null;
-        if (!is_array($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > 256) {
+        if (!is_array($rawMetrics) || !array_is_list($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > 256) {
             throw new InvalidReport('Schema metrics must be a non-empty bounded list.');
         }
 
         $metrics = [];
         $seen = [];
         foreach ($rawMetrics as $rawMetric) {
-            if (!is_array($rawMetric)) {
+            if (!is_array($rawMetric) || array_is_list($rawMetric)) {
                 throw new InvalidReport('Invalid schema metric.');
             }
+            $this->assertAllowedKeys($rawMetric, ['category', 'key', 'type', 'kind', 'aggregation', 'description', 'required'], 'schema metric');
 
             $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', 128);
             $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', 512);
@@ -114,6 +120,15 @@ final class SchemaValidator {
 
         if ($required !== []) {
             throw new InvalidReport('Report is missing a required metric.');
+        }
+    }
+
+    /** @param array<string,mixed> $value
+     *  @param list<string> $allowed
+     */
+    private function assertAllowedKeys(array $value, array $allowed, string $scope): void {
+        if (array_diff(array_keys($value), $allowed) !== []) {
+            throw new InvalidReport("Unknown {$scope} field.");
         }
     }
 
