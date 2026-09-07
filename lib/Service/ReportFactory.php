@@ -6,7 +6,7 @@ namespace OCA\UsageStatisticsServer\Service;
 
 final class ReportFactory {
     private const IDENTIFIER_PATTERN = '/^[A-Za-z0-9_.:-]+$/';
-    private const RFC3339_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/D';
+    private const RFC3339_PATTERN = '/^(?<date>\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))T(?<time>(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d)(?:\.\d{1,6})?(?<timezone>Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/D';
     private const MAX_APPLICATION_LENGTH = 128;
     private const MAX_INSTALLATION_ID_LENGTH = 128;
     private const MAX_CATEGORY_LENGTH = 128;
@@ -98,34 +98,24 @@ final class ReportFactory {
             throw new InvalidReport('Invalid report period.');
         }
 
-        $year = (int)$matches[1];
-        $month = (int)$matches[2];
-        $day = (int)$matches[3];
-        $hour = (int)$matches[4];
-        $minute = (int)$matches[5];
-        $second = (int)$matches[6];
-        $timezone = $matches[8];
-
-        if (!checkdate($month, $day, $year) || $hour > 23 || $minute > 59 || $second > 59) {
-            throw new InvalidReport('Invalid report period.');
-        }
-
-        if ($timezone !== 'Z') {
-            [$timezoneHour, $timezoneMinute] = array_map('intval', explode(':', substr($timezone, 1)));
-            if ($timezoneHour > 23 || $timezoneMinute > 59) {
-                throw new InvalidReport('Invalid report period.');
-            }
-        }
-
         try {
-            return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'));
+            $dateTime = new \DateTimeImmutable($value);
         } catch (\Exception) {
             throw new InvalidReport('Invalid report period.');
         }
+
+        if ($dateTime->format('Y-m-d\TH:i:s') !== $matches['date'] . 'T' . $matches['time']) {
+            throw new InvalidReport('Invalid report period.');
+        }
+
+        return $dateTime->setTimezone(new \DateTimeZone('UTC'));
     }
 
     private function identifier(mixed $value, string $field, int $maxLength): string {
-        if (!is_string($value) || $value === '' || strlen($value) > $maxLength || preg_match(self::IDENTIFIER_PATTERN, $value) !== 1) {
+        if (!is_string($value)) {
+            throw new InvalidReport("Invalid {$field}.");
+        }
+        if ($value === '' || strlen($value) > $maxLength || preg_match(self::IDENTIFIER_PATTERN, $value) !== 1) {
             throw new InvalidReport("Invalid {$field}.");
         }
         return $value;
