@@ -112,7 +112,7 @@ final readonly class ReportRepository {
         $periodEnd = $this->formatDateTime($report->periodEnd);
 
         $seenQb = $this->db->getQueryBuilder();
-        $seenUpdated = $seenQb->update('usage_stats_installations')
+        $seenQb->update('usage_stats_installations')
             ->set('last_seen_at', $seenQb->createNamedParameter($receivedAtValue))
             ->where($seenQb->expr()->eq('application', $seenQb->createNamedParameter($report->application)))
             ->andWhere($seenQb->expr()->eq('installation_id', $seenQb->createNamedParameter($report->installationId)))
@@ -120,7 +120,7 @@ final readonly class ReportRepository {
             ->executeStatement();
 
         $currentQb = $this->db->getQueryBuilder();
-        $currentUpdated = $currentQb->update('usage_stats_installations')
+        $currentQb->update('usage_stats_installations')
             ->set('last_report_id', $currentQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT))
             ->set('last_period_start', $currentQb->createNamedParameter($periodStart))
             ->set('last_period_end', $currentQb->createNamedParameter($periodEnd))
@@ -135,7 +135,7 @@ final readonly class ReportRepository {
             ))
             ->executeStatement();
 
-        if ($seenUpdated > 0 || $currentUpdated > 0 || $this->installationExists($report->application, $report->installationId)) {
+        if ($this->installationExists($report->application, $report->installationId)) {
             return;
         }
 
@@ -156,7 +156,6 @@ final readonly class ReportRepository {
             ->from('usage_stats_installations')
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
             ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($installationId)))
-            ->setMaxResults(1)
             ->executeQuery()
             ->fetchOne() !== false;
     }
