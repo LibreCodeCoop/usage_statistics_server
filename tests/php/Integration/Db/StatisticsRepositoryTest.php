@@ -79,12 +79,63 @@ final class StatisticsRepositoryTest extends TestCase {
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
         );
 
-        self::assertCount(2, $history);
-        self::assertSame(1, $history[0]['count']);
-        self::assertSame(10.0, $history[0]['total']);
-        self::assertSame(2, $history[1]['count']);
-        self::assertSame(30.0, $history[1]['average']);
-        self::assertSame(60.0, $history[1]['total']);
+        self::assertSame([
+            [
+                'periodStart' => '2026-06-01 00:00:00',
+                'periodEnd' => '2026-07-01 00:00:00',
+                'count' => 1,
+                'average' => 10.0,
+                'min' => 10.0,
+                'max' => 10.0,
+                'total' => 10.0,
+            ],
+            [
+                'periodStart' => '2026-07-01 00:00:00',
+                'periodEnd' => '2026-08-01 00:00:00',
+                'count' => 2,
+                'average' => 30.0,
+                'min' => 20.0,
+                'max' => 40.0,
+                'total' => 60.0,
+            ],
+        ], $history);
+    }
+
+    public function testDistributionIsSortedByCountThenValue(): void {
+        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '2.0.0', 1);
+        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 2);
+        $this->store('installation-c', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 3);
+        $this->store('installation-d', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '3.0.0', 4);
+
+        self::assertSame([
+            ['value' => '1.0.0', 'count' => 2],
+            ['value' => '2.0.0', 'count' => 1],
+            ['value' => '3.0.0', 'count' => 1],
+        ], $this->statistics->currentDistribution('libresign', 'server', 'version'));
+    }
+
+    public function testNumericalEvaluationPreservesPrecisionAndExtremes(): void {
+        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 10);
+        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 11);
+        $this->store('installation-c', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 11);
+
+        self::assertSame([
+            'count' => 3,
+            'average' => 10.67,
+            'min' => 10.0,
+            'max' => 11.0,
+            'total' => 32.0,
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+    }
+
+    public function testEmptyNumericalEvaluationUsesNullForDerivedValues(): void {
+        self::assertSame([
+            'count' => 0,
+            'average' => null,
+            'min' => null,
+            'max' => null,
+            'total' => null,
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'missing'));
     }
 
     public function testMetricValuesAreStoredInTheirTypedColumn(): void {
@@ -134,12 +185,18 @@ final class StatisticsRepositoryTest extends TestCase {
         $this->reports->store($this->factory->fromPayload($conflicting));
     }
 
-    public function testSameLogicalReportIsIdempotent(): void {
+    public function testSameLogicalReportIsIdempotentAndReturnsStableIdentity(): void {
         $payload = $this->payload('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.1.0', 20, 1);
         $report = $this->factory->fromPayload($payload);
 
-        self::assertTrue($this->reports->store($report)['created']);
-        self::assertFalse($this->reports->store($report)['created']);
+        $first = $this->reports->store($report);
+        $second = $this->reports->store($report);
+
+        self::assertTrue($first['created']);
+        self::assertFalse($second['created']);
+        self::assertIsInt($first['id']);
+        self::assertIsInt($second['id']);
+        self::assertSame($first['id'], $second['id']);
 
         $qb = $this->db->getQueryBuilder();
         self::assertSame(1, (int)$qb->select($qb->func()->count())->from('usage_stats_reports')->executeQuery()->fetchOne());
