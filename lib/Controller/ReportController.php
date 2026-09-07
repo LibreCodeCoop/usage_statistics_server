@@ -12,12 +12,15 @@ use OCA\UsageStatisticsServer\Service\ReportFactory;
 use OCA\UsageStatisticsServer\Service\SchemaValidator;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AnonRateLimit;
+use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCSController;
 use OCP\IRequest;
 
+#[OpenAPI(tags: ['reports'])]
 final class ReportController extends OCSController {
     public function __construct(
         string $appName,
@@ -30,25 +33,49 @@ final class ReportController extends OCSController {
         parent::__construct($appName, $request);
     }
 
+    /**
+     * Submit a usage statistics report
+     *
+     * Stores one validated report for one application installation and reporting period.
+     * Repeating an already accepted report with the same schema version is idempotent.
+     *
+     * @param int $protocolVersion Usage statistics protocol version
+     * @param string $application Stable application identifier
+     * @param string $installationId Stable pseudonymous installation identifier
+     * @param int $schemaVersion Registered application schema version
+     * @param array{start:string,end:string} $period RFC3339 reporting period, start inclusive and end exclusive
+     * @param list<array{category:string,key:string,type:string,value:string|int|float|bool}> $metrics Aggregate metric values
+     *
+     * @return DataResponse<Http::STATUS_OK, array{status:string}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_CONFLICT, array{error:string,message:string}, array{}>
+     */
     #[PublicPage]
     #[NoCSRFRequired]
     #[AnonRateLimit(limit: 60, period: 3600)]
-    public function create(): DataResponse {
+    #[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/reports', requirements: ['apiVersion' => '(v1)'])]
+    public function create(
+        int $protocolVersion,
+        string $application,
+        string $installationId,
+        int $schemaVersion,
+        array $period,
+        array $metrics,
+    ): DataResponse {
         try {
-            $payload = json_decode($this->request->getRawInput(), true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($payload)) {
-                throw new InvalidReport('Request body must be a JSON object.');
-            }
-
-            $report = $this->factory->fromPayload($payload);
+            $report = $this->factory->fromPayload([
+                'protocolVersion' => $protocolVersion,
+                'application' => $application,
+                'installationId' => $installationId,
+                'schemaVersion' => $schemaVersion,
+                'period' => $period,
+                'metrics' => $metrics,
+            ]);
             $schema = $this->schemas->find($report->application, $report->schemaVersion);
             if ($schema === null) {
                 throw new InvalidReport('Application schema is not registered.');
             }
             $this->schemaValidator->validateReport($report, $schema);
-
             $this->repository->store($report);
-        } catch (InvalidReport|\JsonException $e) {
+        } catch (InvalidReport $e) {
             return new DataResponse(['error' => 'invalid_report', 'message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
         } catch (ConflictingReport $e) {
             return new DataResponse(['error' => 'conflicting_report', 'message' => $e->getMessage()], Http::STATUS_CONFLICT);
