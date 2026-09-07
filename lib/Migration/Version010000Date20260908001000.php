@@ -48,9 +48,10 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
             $metrics->addColumn('id', Types::BIGINT, ['autoincrement' => true, 'unsigned' => true]);
             $metrics->addColumn('report_id', Types::BIGINT, ['unsigned' => true]);
             $metrics->addColumn('category', Types::STRING, ['length' => 128]);
-            $metrics->addColumn('metric_key', Types::STRING, ['length' => 256]);
+            $metrics->addColumn('metric_key', Types::STRING, ['length' => 512]);
             $metrics->addColumn('metric_type', Types::STRING, ['length' => 16]);
             $metrics->addColumn('metric_value', Types::TEXT);
+            $metrics->addColumn('numeric_value', Types::FLOAT, ['notnull' => false]);
             $metrics->setPrimaryKey(['id']);
             $metrics->addUniqueIndex(['report_id', 'category', 'metric_key'], 'usage_stats_metric_identity');
             $metrics->addIndex(['category', 'metric_key'], 'usage_stats_metric_lookup');
