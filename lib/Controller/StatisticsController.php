@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\UsageStatisticsServer\Controller;
 
+use OCA\UsageStatisticsServer\Db\SchemaRepository;
 use OCA\UsageStatisticsServer\Db\StatisticsRepository;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
@@ -21,6 +22,7 @@ final class StatisticsController extends OCSController {
         string $appName,
         IRequest $request,
         private readonly StatisticsRepository $statistics,
+        private readonly SchemaRepository $schemas,
     ) {
         parent::__construct($appName, $request);
     }
@@ -55,12 +57,19 @@ final class StatisticsController extends OCSController {
      * @param string $category Metric category
      * @param string $key Metric key
      *
-     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,values:list<array{value:mixed,count:int}>}, array{}>
+     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,values:list<array{value:mixed,count:int}>}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}>
      *
      * 200: Current metric distribution
+     * 400: Metric does not support distribution aggregation
+     * 404: Metric is not registered
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/distribution', requirements: ['apiVersion' => '(v1)'])]
     public function distribution(string $application, string $category, string $key): DataResponse {
+        $error = $this->validateAggregation($application, $category, $key, 'distribution');
+        if ($error !== null) {
+            return $error;
+        }
+
         return new DataResponse([
             'application' => $application,
             'category' => $category,
@@ -76,12 +85,19 @@ final class StatisticsController extends OCSController {
      * @param string $category Metric category
      * @param string $key Metric key
      *
-     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,statistics:array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}}, array{}>
+     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,statistics:array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}>
      *
      * 200: Current numerical metric evaluation
+     * 400: Metric does not support numerical aggregation
+     * 404: Metric is not registered
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/numerical', requirements: ['apiVersion' => '(v1)'])]
     public function numerical(string $application, string $category, string $key): DataResponse {
+        $error = $this->validateAggregation($application, $category, $key, 'numerical');
+        if ($error !== null) {
+            return $error;
+        }
+
         return new DataResponse([
             'application' => $application,
             'category' => $category,
@@ -99,10 +115,11 @@ final class StatisticsController extends OCSController {
      * @param string $from Optional RFC3339 lower bound
      * @param string $to Optional RFC3339 upper bound
      *
-     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,from:string,to:string,periods:list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}>}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST, array{error:string,message:string}, array{}>
+     * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,from:string,to:string,periods:list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}>}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}>
      *
      * 200: Historical numerical metric evaluation
-     * 400: Invalid date range
+     * 400: Invalid date range or metric aggregation
+     * 404: Metric is not registered
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/numerical/history', requirements: ['apiVersion' => '(v1)'])]
     public function numericalHistory(
@@ -112,6 +129,11 @@ final class StatisticsController extends OCSController {
         string $from = '',
         string $to = '',
     ): DataResponse {
+        $error = $this->validateAggregation($application, $category, $key, 'numerical');
+        if ($error !== null) {
+            return $error;
+        }
+
         try {
             $range = $this->parseRange($from, $to);
         } catch (\InvalidArgumentException $e) {
@@ -135,6 +157,26 @@ final class StatisticsController extends OCSController {
                 $range['to'],
             ),
         ]);
+    }
+
+    /** @return DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}>|null */
+    private function validateAggregation(string $application, string $category, string $key, string $aggregation): ?DataResponse {
+        $metric = $this->schemas->findMetric($application, $category, $key);
+        if ($metric === null) {
+            return new DataResponse([
+                'error' => 'metric_not_found',
+                'message' => 'Metric is not registered for this application.',
+            ], Http::STATUS_NOT_FOUND);
+        }
+
+        if (($metric['aggregation'] ?? null) !== $aggregation) {
+            return new DataResponse([
+                'error' => 'invalid_aggregation',
+                'message' => "Metric does not support {$aggregation} aggregation.",
+            ], Http::STATUS_BAD_REQUEST);
+        }
+
+        return null;
     }
 
     /** @return array{from:\DateTimeImmutable,to:\DateTimeImmutable} */
