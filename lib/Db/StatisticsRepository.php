@@ -36,6 +36,7 @@ final readonly class StatisticsRepository {
             ->andWhere($qb->expr()->eq('m.metric_key', $qb->createNamedParameter($key)))
             ->groupBy('m.metric_value')
             ->orderBy('value_count', 'DESC')
+            ->addOrderBy('m.metric_value', 'ASC')
             ->executeQuery();
 
         $distribution = [];
