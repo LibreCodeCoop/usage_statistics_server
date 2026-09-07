@@ -48,9 +48,8 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
             $reports->addColumn('period_start', Types::DATETIME_IMMUTABLE);
             $reports->addColumn('period_end', Types::DATETIME_IMMUTABLE);
             $reports->addColumn('received_at', Types::DATETIME_IMMUTABLE);
-            $reports->addColumn('raw_payload', Types::TEXT);
             $reports->setPrimaryKey(['id']);
-            $reports->addUniqueIndex(['application', 'installation_id', 'schema_version', 'period_start', 'period_end'], 'usage_stats_report_identity');
+            $reports->addUniqueIndex(['application', 'installation_id', 'period_start', 'period_end'], 'usage_stats_report_identity');
             $reports->addIndex(['application', 'received_at'], 'usage_stats_recent_reports');
         }
 
@@ -61,8 +60,10 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
             $metrics->addColumn('category', Types::STRING, ['length' => 128]);
             $metrics->addColumn('metric_key', Types::STRING, ['length' => 512]);
             $metrics->addColumn('metric_type', Types::STRING, ['length' => 16]);
-            $metrics->addColumn('metric_value', Types::TEXT);
-            $metrics->addColumn('numeric_value', Types::FLOAT, ['notnull' => false]);
+            $metrics->addColumn('value_integer', Types::BIGINT, ['notnull' => false]);
+            $metrics->addColumn('value_number', Types::FLOAT, ['notnull' => false]);
+            $metrics->addColumn('value_boolean', Types::BOOLEAN, ['notnull' => false]);
+            $metrics->addColumn('value_string', Types::TEXT, ['notnull' => false]);
             $metrics->setPrimaryKey(['id']);
             $metrics->addUniqueIndex(['report_id', 'category', 'metric_key'], 'usage_stats_metric_identity');
             $metrics->addIndex(['category', 'metric_key'], 'usage_stats_metric_lookup');
