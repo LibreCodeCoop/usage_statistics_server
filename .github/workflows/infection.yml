@@ -128,6 +128,7 @@ jobs:
             --coverage=build/coverage \
             --skip-initial-tests \
             --threads=max \
+            --show-mutations=max \
             --no-progress \
             --no-interaction 2>&1 | tee infection.log
 
