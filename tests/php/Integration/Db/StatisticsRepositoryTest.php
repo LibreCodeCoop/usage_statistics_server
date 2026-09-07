@@ -9,8 +9,10 @@ use OCA\UsageStatisticsServer\Db\StatisticsRepository;
 use OCA\UsageStatisticsServer\Service\ReportFactory;
 use OCP\IDBConnection;
 use OCP\Server;
+use PHPUnit\Framework\Attributes\Group;
 use Test\TestCase;
 
+#[Group('DB')]
 final class StatisticsRepositoryTest extends TestCase {
     private IDBConnection $db;
     private ReportRepository $reports;
