@@ -65,9 +65,9 @@ final class StatisticsController extends OCSController {
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/distribution', requirements: ['apiVersion' => '(v1)'])]
     public function distribution(string $application, string $category, string $key): DataResponse {
-        $error = $this->validateAggregation($application, $category, $key, 'distribution');
-        if ($error !== null) {
-            return $error;
+        $type = $this->metricTypeForAggregation($application, $category, $key, 'distribution');
+        if ($type instanceof DataResponse) {
+            return $type;
         }
 
         return new DataResponse([
@@ -93,16 +93,16 @@ final class StatisticsController extends OCSController {
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/numerical', requirements: ['apiVersion' => '(v1)'])]
     public function numerical(string $application, string $category, string $key): DataResponse {
-        $error = $this->validateAggregation($application, $category, $key, 'numerical');
-        if ($error !== null) {
-            return $error;
+        $type = $this->metricTypeForAggregation($application, $category, $key, 'numerical');
+        if ($type instanceof DataResponse) {
+            return $type;
         }
 
         return new DataResponse([
             'application' => $application,
             'category' => $category,
             'key' => $key,
-            'statistics' => $this->statistics->currentNumericalEvaluation($application, $category, $key),
+            'statistics' => $this->statistics->currentNumericalEvaluation($application, $category, $key, $type),
         ]);
     }
 
@@ -129,9 +129,9 @@ final class StatisticsController extends OCSController {
         string $from = '',
         string $to = '',
     ): DataResponse {
-        $error = $this->validateAggregation($application, $category, $key, 'numerical');
-        if ($error !== null) {
-            return $error;
+        $type = $this->metricTypeForAggregation($application, $category, $key, 'numerical');
+        if ($type instanceof DataResponse) {
+            return $type;
         }
 
         try {
@@ -153,14 +153,15 @@ final class StatisticsController extends OCSController {
                 $application,
                 $category,
                 $key,
+                $type,
                 $range['from'],
                 $range['to'],
             ),
         ]);
     }
 
-    /** @return DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}>|null */
-    private function validateAggregation(string $application, string $category, string $key, string $aggregation): ?DataResponse {
+    /** @return string|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_NOT_FOUND, array{error:string,message:string}, array{}> */
+    private function metricTypeForAggregation(string $application, string $category, string $key, string $aggregation): string|DataResponse {
         $metric = $this->schemas->findMetric($application, $category, $key);
         if ($metric === null) {
             return new DataResponse([
@@ -176,7 +177,12 @@ final class StatisticsController extends OCSController {
             ], Http::STATUS_BAD_REQUEST);
         }
 
-        return null;
+        $type = $metric['type'] ?? null;
+        if (!is_string($type)) {
+            throw new \LogicException('Registered metric type must be a string.');
+        }
+
+        return $type;
     }
 
     /** @return array{from:\DateTimeImmutable,to:\DateTimeImmutable} */
