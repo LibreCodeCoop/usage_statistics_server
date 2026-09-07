@@ -1,52 +1,41 @@
-# Based on the Nextcloud organization workflow template.
+# This workflow is provided via the organization template repository
+#
+# https://github.com/nextcloud/.github
+# https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
+#
+# SPDX-FileCopyrightText: 2022-2024 Nextcloud GmbH and Nextcloud contributors
 # SPDX-License-Identifier: MIT
 
 name: Static analysis
 
 on: pull_request
 
-permissions:
-  contents: read
-
 concurrency:
   group: psalm-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   static-analysis:
     runs-on: ubuntu-latest
-    env:
-      APP_NAME: usage_statistics_server
 
+    name: static-psalm-analysis
     steps:
-      - name: Checkout app metadata
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Get version matrix
+      - name: Get php version
         id: versions
-        uses: icewind1991/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
+        uses: nextcloud-libraries/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
 
-      - name: Checkout server
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          submodules: true
-          repository: nextcloud/server
-          ref: ${{ steps.versions.outputs.branches-max }}
-
-      - name: Checkout app
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          path: apps/${{ env.APP_NAME }}
-
-      - name: Check minimum PHP version in psalm.xml
-        working-directory: apps/${{ env.APP_NAME }}
+      - name: Check enforcement of minimum PHP version ${{ steps.versions.outputs.php-min }} in psalm.xml
         run: grep 'phpVersion="${{ steps.versions.outputs.php-min }}' psalm.xml
 
-      - name: Set up PHP
+      - name: Set up php${{ steps.versions.outputs.php-available }}
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: ${{ steps.versions.outputs.php-available }}
@@ -58,18 +47,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove nextcloud/ocp
-        working-directory: apps/${{ env.APP_NAME }}
         run: composer remove nextcloud/ocp --dev --no-scripts
 
-      - name: Install Composer dependencies
+      - name: Install composer dependencies
         uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # v4.0.0
-        with:
-          working-directory: apps/${{ env.APP_NAME }}
 
-      - name: Install matching nextcloud/ocp
-        working-directory: apps/${{ env.APP_NAME }}
+      - name: Install nextcloud/ocp:dev-${{ steps.versions.outputs.branches-max }}
         run: composer require --dev nextcloud/ocp:dev-${{ steps.versions.outputs.branches-max }} --ignore-platform-reqs --with-dependencies
 
       - name: Run Psalm
-        working-directory: apps/${{ env.APP_NAME }}
         run: composer run psalm -- --threads=1 --monochrome --no-progress --output-format=github
