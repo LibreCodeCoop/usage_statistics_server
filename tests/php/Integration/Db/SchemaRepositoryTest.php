@@ -76,6 +76,31 @@ final class SchemaRepositoryTest extends TestCase {
         $this->schemas->store('libresign', 3, $third);
     }
 
+    public function testCompatibilityContinuesAfterNewMetric(): void {
+        $first = $this->definition(1);
+        $second = $this->definition(2);
+        $second['metrics'] = [
+            [
+                'category' => 'new',
+                'key' => 'metric',
+                'type' => 'boolean',
+                'kind' => 'snapshot',
+                'aggregation' => 'distribution',
+                'description' => 'New metric',
+                'required' => false,
+            ],
+            [
+                ...$first['metrics'][0],
+                'type' => 'number',
+            ],
+        ];
+
+        $this->schemas->store('libresign', 1, $first);
+
+        $this->expectException(\LogicException::class);
+        $this->schemas->store('libresign', 2, $second);
+    }
+
     #[DataProvider('incompatibleMetricProvider')]
     public function testRejectsIncompatibleMetricSemantics(string $field, string $value): void {
         $first = $this->definition(1);
@@ -93,6 +118,27 @@ final class SchemaRepositoryTest extends TestCase {
         yield 'type' => ['type', 'number'];
         yield 'kind' => ['kind', 'snapshot'];
         yield 'aggregation' => ['aggregation', 'none'];
+    }
+
+    public function testMetricLookupRequiresCategoryAndKeyToMatch(): void {
+        $definition = $this->definition(1);
+        $definition['metrics'] = [
+            [
+                ...$definition['metrics'][0],
+                'key' => 'other_key',
+            ],
+            [
+                ...$definition['metrics'][0],
+                'category' => 'other_category',
+            ],
+            $definition['metrics'][0],
+        ];
+        $this->schemas->store('libresign', 1, $definition);
+
+        self::assertSame(
+            $definition['metrics'][2],
+            $this->schemas->findMetric('libresign', 'usage', 'requests_completed'),
+        );
     }
 
     public function testMetricLookupSearchesAllStoredDefinitions(): void {
