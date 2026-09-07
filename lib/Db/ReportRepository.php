@@ -17,6 +17,11 @@ final readonly class ReportRepository {
 
     /** @return array{id:int,created:bool} */
     public function store(Report $report, array $rawPayload): array {
+        return $this->storeWithRetry($report, $rawPayload, true);
+    }
+
+    /** @return array{id:int,created:bool} */
+    private function storeWithRetry(Report $report, array $rawPayload, bool $allowRetry): array {
         $existing = $this->findId($report);
         if ($existing !== null) {
             return ['id' => $existing, 'created' => false];
@@ -55,17 +60,7 @@ final readonly class ReportRepository {
                 ])->executeStatement();
             }
 
-            $this->db->setValues(
-                'usage_stats_installations',
-                [
-                    'application' => $report->application,
-                    'installation_id' => $report->installationId,
-                ],
-                [
-                    'last_seen_at' => $this->formatDateTime($receivedAt),
-                    'last_report_id' => $reportId,
-                ],
-            );
+            $this->updateInstallation($report, $reportId, $receivedAt);
 
             $this->db->commit();
             return ['id' => $reportId, 'created' => true];
@@ -79,10 +74,36 @@ final readonly class ReportRepository {
                 if ($id !== null) {
                     return ['id' => $id, 'created' => false];
                 }
+
+                if ($allowRetry) {
+                    return $this->storeWithRetry($report, $rawPayload, false);
+                }
             }
 
             throw $e;
         }
+    }
+
+    private function updateInstallation(Report $report, int $reportId, \DateTimeImmutable $receivedAt): void {
+        $qb = $this->db->getQueryBuilder();
+        $updated = $qb->update('usage_stats_installations')
+            ->set('last_seen_at', $qb->createNamedParameter($this->formatDateTime($receivedAt)))
+            ->set('last_report_id', $qb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT))
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter($report->application)))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($report->installationId)))
+            ->executeStatement();
+
+        if ($updated > 0) {
+            return;
+        }
+
+        $insertQb = $this->db->getQueryBuilder();
+        $insertQb->insert('usage_stats_installations')->values([
+            'application' => $insertQb->createNamedParameter($report->application),
+            'installation_id' => $insertQb->createNamedParameter($report->installationId),
+            'last_seen_at' => $insertQb->createNamedParameter($this->formatDateTime($receivedAt)),
+            'last_report_id' => $insertQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
+        ])->executeStatement();
     }
 
     private function findId(Report $report): ?int {
