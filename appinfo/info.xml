@@ -1,5 +1,12 @@
 <?xml version="1.0"?>
-<info>
+
+<!--
+SPDX-FileCopyrightText: 2026 Vitor Mattos
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>usage_statistics_server</id>
     <name>Usage Statistics Server</name>
     <summary>Receive and aggregate privacy-preserving usage statistics.</summary>
@@ -11,6 +18,8 @@ A generic Nextcloud app for receiving, storing, aggregating, and exposing privac
     <author mail="vitor@php.rio">Vitor Mattos</author>
     <namespace>UsageStatisticsServer</namespace>
     <category>tools</category>
+    <repository type="git">https://github.com/vitormattos/usage-statistics-server</repository>
+    <bugs>https://github.com/vitormattos/usage-statistics-server/issues</bugs>
     <dependencies>
         <nextcloud min-version="35" max-version="36"/>
     </dependencies>
