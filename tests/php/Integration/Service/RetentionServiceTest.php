@@ -102,7 +102,7 @@ final class RetentionServiceTest extends TestCase {
     private function countRows(string $table): int {
         $qb = $this->db->getQueryBuilder();
         return (int)$qb
-            ->select($qb->func()->count('*'))
+            ->select($qb->func()->count())
             ->from($table)
             ->executeQuery()
             ->fetchOne();
