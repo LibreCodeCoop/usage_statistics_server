@@ -26,6 +26,8 @@ final class SettingsController extends OCSController {
      * Get usage statistics server settings
      *
      * @return DataResponse<Http::STATUS_OK, array{retentionDays:int,minimumRetentionDays:int,maximumRetentionDays:int}, array{}>
+     *
+     * 200: Current server settings
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/settings', requirements: ['apiVersion' => '(v1)'])]
     public function get(): DataResponse {
@@ -42,6 +44,9 @@ final class SettingsController extends OCSController {
      * @param int $retentionDays Number of days to retain reports
      *
      * @return DataResponse<Http::STATUS_OK, array{retentionDays:int}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST, array{error:string,message:string}, array{}>
+     *
+     * 200: Server settings updated
+     * 400: Invalid retention value
      */
     #[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/admin/settings', requirements: ['apiVersion' => '(v1)'])]
     public function update(int $retentionDays): DataResponse {
