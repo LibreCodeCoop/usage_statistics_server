@@ -32,8 +32,11 @@ final class ReportFactory {
         }
 
         $period = $payload['period'] ?? null;
-        if (!is_array($period) || array_is_list($period)) {
+        if (!is_array($period)) {
             throw new InvalidReport('period is required.');
+        }
+        if (array_is_list($period)) {
+            throw new InvalidReport('period must be a JSON object.');
         }
         $this->assertAllowedKeys($period, ['start', 'end'], 'period');
 
@@ -45,14 +48,20 @@ final class ReportFactory {
         }
 
         $rawMetrics = $payload['metrics'] ?? null;
-        if (!is_array($rawMetrics) || !array_is_list($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > self::MAX_METRICS) {
+        if (!is_array($rawMetrics)) {
+            throw new InvalidReport('metrics must be a non-empty bounded list.');
+        }
+        if (!array_is_list($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > self::MAX_METRICS) {
             throw new InvalidReport('metrics must be a non-empty bounded list.');
         }
 
         $metrics = [];
         $seen = [];
         foreach ($rawMetrics as $rawMetric) {
-            if (!is_array($rawMetric) || array_is_list($rawMetric)) {
+            if (!is_array($rawMetric)) {
+                throw new InvalidReport('Invalid metric.');
+            }
+            if (array_is_list($rawMetric)) {
                 throw new InvalidReport('Invalid metric.');
             }
             $this->assertAllowedKeys($rawMetric, ['category', 'key', 'type', 'value'], 'metric');
@@ -94,7 +103,10 @@ final class ReportFactory {
     }
 
     private function parseRfc3339(mixed $value): \DateTimeImmutable {
-        if (!is_string($value) || preg_match(self::RFC3339_PATTERN, $value, $matches) !== 1) {
+        if (!is_string($value)) {
+            throw new InvalidReport('Invalid report period.');
+        }
+        if (preg_match(self::RFC3339_PATTERN, $value, $matches) !== 1) {
             throw new InvalidReport('Invalid report period.');
         }
 
