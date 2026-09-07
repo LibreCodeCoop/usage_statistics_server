@@ -7,7 +7,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: behat-sqlite-${{ github.head_ref || github.run_id }}
@@ -66,7 +66,8 @@ jobs:
       - name: Checkout app
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
+          ref: ${{ github.head_ref }}
           path: apps/${{ env.APP_NAME }}
 
       - name: Set up PHP 8.3
@@ -86,6 +87,18 @@ jobs:
           composer remove nextcloud/ocp --dev --no-scripts
           composer install --no-dev --no-scripts
           composer --working-dir=tests/integration install --prefer-dist --no-progress
+
+      - name: Commit generated integration lock
+        if: matrix.server-version == 'master'
+        working-directory: apps/${{ env.APP_NAME }}
+        run: |
+          if git status --porcelain -- tests/integration/composer.lock | grep -q .; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add tests/integration/composer.lock
+            git commit -s -m 'test: lock Behat integration dependencies'
+            git push origin HEAD:${GITHUB_HEAD_REF}
+          fi
 
       - name: Set up Nextcloud
         run: |
@@ -115,9 +128,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: behat-results-${{ matrix.server-version }}-php8.3
-          path: |
-            apps/${{ env.APP_NAME }}/tests/integration/output/
-            apps/${{ env.APP_NAME }}/tests/integration/composer.lock
+          path: apps/${{ env.APP_NAME }}/tests/integration/output/
           if-no-files-found: ignore
           retention-days: 30
 
