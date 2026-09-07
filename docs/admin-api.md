@@ -8,7 +8,7 @@ The API intentionally exposes aggregates rather than individual installation rep
 
 ## Summary
 
-`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/{application}`
+`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/applications/{application}`
 
 Returns the number of installations that submitted a valid report during the active window.
 
@@ -28,7 +28,7 @@ Example response data:
 
 ## Current distribution
 
-`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/{application}/metrics/{category}/{key}/distribution`
+`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/applications/{application}/metrics/{category}/{key}/distribution`
 
 Returns a categorical distribution using only the latest report for every known installation.
 
@@ -50,7 +50,7 @@ This endpoint represents current state. Older reports from the same installation
 
 ## Current numerical evaluation
 
-`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/{application}/metrics/{category}/{key}/numerical`
+`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/applications/{application}/metrics/{category}/{key}/numerical`
 
 Returns the standard numerical evaluation for a numeric metric using only the latest report from each installation.
 
@@ -73,7 +73,7 @@ The shape follows the same useful aggregation set used by Nextcloud's `survey_se
 
 ## Numerical history
 
-`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/{application}/metrics/{category}/{key}/numerical/history`
+`GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/applications/{application}/metrics/{category}/{key}/numerical/history`
 
 Optional query parameters:
 
