@@ -96,13 +96,16 @@ final class SchemaValidator {
         $allowed = [];
         $required = [];
         foreach ($definition['metrics'] ?? [] as $metric) {
-            if (!is_array($metric)) {
+            if (!is_array($metric)
+                || !isset($metric['category'], $metric['key'], $metric['type'])
+                || !array_key_exists('required', $metric)
+                || !is_bool($metric['required'])) {
                 throw new InvalidReport('Invalid registered application schema.');
             }
 
-            $identity = MetricIdentity::fromParts((string)($metric['category'] ?? ''), (string)($metric['key'] ?? ''));
+            $identity = MetricIdentity::fromParts((string)$metric['category'], (string)$metric['key']);
             $allowed[$identity] = $metric;
-            if (($metric['required'] ?? false) === true) {
+            if ($metric['required']) {
                 $required[] = $identity;
             }
         }
@@ -111,7 +114,7 @@ final class SchemaValidator {
         foreach ($report->metrics as $metric) {
             $identity = MetricIdentity::fromParts($metric->category, $metric->key);
             $schemaMetric = $allowed[$identity] ?? null;
-            if (!is_array($schemaMetric) || ($schemaMetric['type'] ?? null) !== $metric->type) {
+            if (!is_array($schemaMetric) || $schemaMetric['type'] !== $metric->type) {
                 throw new InvalidReport('Report metric does not match the application schema.');
             }
             $reported[] = $identity;
@@ -132,7 +135,10 @@ final class SchemaValidator {
     }
 
     private function identifier(mixed $value, string $field, int $maxLength): string {
-        if (!is_string($value) || $value === '' || strlen($value) > $maxLength || preg_match(self::IDENTIFIER_PATTERN, $value) !== 1) {
+        if (!is_string($value)) {
+            throw new InvalidReport("Invalid {$field}.");
+        }
+        if ($value === '' || strlen($value) > $maxLength || preg_match(self::IDENTIFIER_PATTERN, $value) !== 1) {
             throw new InvalidReport("Invalid {$field}.");
         }
         return $value;
