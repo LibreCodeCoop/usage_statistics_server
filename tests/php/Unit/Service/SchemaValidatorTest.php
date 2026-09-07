@@ -55,6 +55,8 @@ final class SchemaValidatorTest extends TestCase {
 
     /** @return iterable<string,array{string,mixed}> */
     public static function invalidDefinitionScalarProvider(): iterable {
+        yield 'null application' => ['application', null];
+        yield 'integer application' => ['application', 1];
         yield 'empty application' => ['application', ''];
         yield 'invalid application chars' => ['application', 'libre sign'];
         yield 'application too long' => ['application', str_repeat('a', 129)];
@@ -102,7 +104,7 @@ final class SchemaValidatorTest extends TestCase {
     }
 
     #[DataProvider('invalidMetricDefinitionProvider')]
-    public function testRejectsInvalidMetricDefinition(array $metric): void {
+    public function testRejectsInvalidMetricDefinition(mixed $metric): void {
         $definition = $this->definition();
         $definition['metrics'] = [$metric];
 
@@ -110,8 +112,10 @@ final class SchemaValidatorTest extends TestCase {
         $this->validator->validateDefinition($definition);
     }
 
-    /** @return iterable<string,array{array<string,mixed>}> */
+    /** @return iterable<string,array{mixed}> */
     public static function invalidMetricDefinitionProvider(): iterable {
+        yield 'scalar metric' => ['metric'];
+        yield 'list metric' => [['usage', 'x', 'integer']];
         yield 'category too long' => [[
             'category' => str_repeat('a', 129), 'key' => 'x', 'type' => 'integer', 'kind' => 'period', 'aggregation' => 'numerical',
         ]];
@@ -152,6 +156,7 @@ final class SchemaValidatorTest extends TestCase {
 
     public function testAcceptsMetricBoundaryLengths(): void {
         $definition = $this->definition();
+        $definition['application'] = str_repeat('a', 128);
         $definition['metrics'] = [[
             'category' => str_repeat('a', 128),
             'key' => str_repeat('b', 512),
@@ -163,6 +168,7 @@ final class SchemaValidatorTest extends TestCase {
         ]];
 
         $validated = $this->validator->validateDefinition($definition);
+        self::assertSame(str_repeat('a', 128), $validated['application']);
         self::assertSame(str_repeat('x', 512), $validated['metrics'][0]['description']);
     }
 
@@ -242,6 +248,34 @@ final class SchemaValidatorTest extends TestCase {
 
         $this->validator->validateReport($report, $definition);
         self::assertTrue(true);
+    }
+
+    #[DataProvider('invalidRegisteredMetricProvider')]
+    public function testRejectsInvalidRegisteredMetric(array $metric): void {
+        $definition = $this->validator->validateDefinition($this->definition());
+        $definition['metrics'][0] = $metric;
+
+        $this->expectException(InvalidReport::class);
+        $this->validator->validateReport($this->report(), $definition);
+    }
+
+    /** @return iterable<string,array{array<string,mixed>}> */
+    public static function invalidRegisteredMetricProvider(): iterable {
+        yield 'missing category' => [[
+            'key' => 'version', 'type' => 'string', 'required' => true,
+        ]];
+        yield 'missing key' => [[
+            'category' => 'server', 'type' => 'string', 'required' => true,
+        ]];
+        yield 'missing type' => [[
+            'category' => 'server', 'key' => 'version', 'required' => true,
+        ]];
+        yield 'missing required' => [[
+            'category' => 'server', 'key' => 'version', 'type' => 'string',
+        ]];
+        yield 'required not boolean' => [[
+            'category' => 'server', 'key' => 'version', 'type' => 'string', 'required' => 1,
+        ]];
     }
 
     #[DataProvider('unknownSchemaFieldProvider')]
