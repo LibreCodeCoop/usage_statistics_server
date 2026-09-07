@@ -19,7 +19,6 @@ jobs:
     outputs:
       php-min: ${{ steps.versions.outputs.php-min }}
       php-max: ${{ steps.versions.outputs.php-max }}
-      php-available: ${{ steps.versions.outputs.php-available }}
       branches-min: ${{ steps.versions.outputs.branches-min }}
       branches-max: ${{ steps.versions.outputs.branches-max }}
 
@@ -68,7 +67,7 @@ jobs:
           - php-version: ${{ needs.matrix.outputs.php-min }}
             server-version: ${{ needs.matrix.outputs.branches-min }}
             boundary: minimum
-          - php-version: ${{ needs.matrix.outputs.php-available }}
+          - php-version: ${{ needs.matrix.outputs.php-max }}
             server-version: ${{ needs.matrix.outputs.branches-max }}
             boundary: maximum
 
