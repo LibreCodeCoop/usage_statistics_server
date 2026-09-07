@@ -9,6 +9,7 @@ use OCP\IDBConnection;
 
 final readonly class RetentionService {
     private const BATCH_SIZE = 500;
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
 
     public function __construct(private IDBConnection $db) {
     }
@@ -64,7 +65,7 @@ final readonly class RetentionService {
         return $qb->delete('usage_stats_installations')
             ->where($qb->expr()->lt(
                 'last_seen_at',
-                $qb->createNamedParameter($cutoff, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
+                $qb->createNamedParameter($this->formatDateTime($cutoff)),
             ))
             ->executeStatement();
     }
@@ -76,7 +77,7 @@ final readonly class RetentionService {
             ->from('usage_stats_reports')
             ->where($qb->expr()->lt(
                 'received_at',
-                $qb->createNamedParameter($cutoff, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
+                $qb->createNamedParameter($this->formatDateTime($cutoff)),
             ))
             ->orderBy('id', 'ASC')
             ->setMaxResults(self::BATCH_SIZE)
@@ -85,5 +86,11 @@ final readonly class RetentionService {
         $ids = array_map('intval', $result->fetchFirstColumn());
         $result->closeCursor();
         return $ids;
+    }
+
+    private function formatDateTime(\DateTimeImmutable $dateTime): string {
+        return $dateTime
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format(self::DB_DATETIME_FORMAT);
     }
 }
