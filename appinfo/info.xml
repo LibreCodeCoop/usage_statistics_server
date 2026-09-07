@@ -18,8 +18,8 @@ A generic Nextcloud app for receiving, storing, aggregating, and exposing privac
     <author mail="vitor@php.rio">Vitor Mattos</author>
     <namespace>UsageStatisticsServer</namespace>
     <category>tools</category>
-    <repository type="git">https://github.com/vitormattos/usage-statistics-server</repository>
     <bugs>https://github.com/vitormattos/usage-statistics-server/issues</bugs>
+    <repository type="git">https://github.com/vitormattos/usage-statistics-server</repository>
     <dependencies>
         <nextcloud min-version="35" max-version="36"/>
     </dependencies>
