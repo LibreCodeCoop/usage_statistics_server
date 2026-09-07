@@ -23,8 +23,9 @@
         }
     },
     "scripts": {
-        "lint": "find lib tests -name '*.php' -print0 | xargs -0 -n1 php -l",
-        "test:unit": "phpunit -c tests/php/phpunit.xml --no-coverage --colors=always --fail-on-warning --fail-on-risky"
+        "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l",
+        "test:unit": "phpunit -c tests/php/phpunit.xml --testsuite unit --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations",
+        "test:php": "phpunit -c tests/php/phpunit.xml --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations"
     },
     "config": {
         "optimize-autoloader": true,
