@@ -85,7 +85,7 @@ jobs:
         with:
           php-version: ${{ needs.matrix.outputs.php-min }}
           extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, sockets, sqlite, pdo_sqlite, xmlreader, xmlwriter, zip, zlib
-          coverage: xdebug
+          coverage: pcov
           ini-file: development
           ini-values: disable_functions=, memory_limit=2G
         env:
@@ -110,8 +110,6 @@ jobs:
 
       - name: Generate mutation coverage
         working-directory: apps/${{ env.APP_NAME }}
-        env:
-          XDEBUG_MODE: coverage
         run: |
           mkdir -p build/coverage/coverage-xml
           vendor/bin/phpunit -c tests/php/phpunit.xml \
@@ -126,7 +124,6 @@ jobs:
         working-directory: apps/${{ env.APP_NAME }}
         env:
           COMPOSER_PROCESS_TIMEOUT: 0
-          XDEBUG_MODE: coverage
         run: |
           set -o pipefail
           composer mutation:test -- \
