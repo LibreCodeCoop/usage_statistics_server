@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\UsageStatisticsServer\Db;
 
+use OCA\UsageStatisticsServer\Service\MetricIdentity;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
@@ -102,7 +103,7 @@ final readonly class SchemaRepository {
                 if (!is_array($metric)) {
                     continue;
                 }
-                $identity = ($metric['category'] ?? '') . ':' . ($metric['key'] ?? '');
+                $identity = MetricIdentity::fromParts((string)($metric['category'] ?? ''), (string)($metric['key'] ?? ''));
                 $existingMetrics[$identity] = $metric;
             }
         }
@@ -111,7 +112,7 @@ final readonly class SchemaRepository {
             if (!is_array($metric)) {
                 continue;
             }
-            $identity = ($metric['category'] ?? '') . ':' . ($metric['key'] ?? '');
+            $identity = MetricIdentity::fromParts((string)($metric['category'] ?? ''), (string)($metric['key'] ?? ''));
             $existing = $existingMetrics[$identity] ?? null;
             if (!is_array($existing)) {
                 continue;
@@ -119,7 +120,7 @@ final readonly class SchemaRepository {
 
             foreach (['type', 'kind', 'aggregation'] as $field) {
                 if (($existing[$field] ?? null) !== ($metric[$field] ?? null)) {
-                    throw new \LogicException("Metric {$identity} changes {$field}; use a new metric key for incompatible semantics.");
+                    throw new \LogicException("Metric {$metric['category']}:{$metric['key']} changes {$field}; use a new metric key for incompatible semantics.");
                 }
             }
         }
