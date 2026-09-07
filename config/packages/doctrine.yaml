@@ -1,5 +1,0 @@
-doctrine:
-  dbal:
-    url: '%env(resolve:DATABASE_URL)%'
-    profiling_collect_backtrace: '%kernel.debug%'
-    use_savepoints: true
