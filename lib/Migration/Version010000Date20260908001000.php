@@ -35,6 +35,8 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
             $installations->addColumn('installation_id', Types::STRING, ['length' => 128]);
             $installations->addColumn('last_seen_at', Types::DATETIME_IMMUTABLE);
             $installations->addColumn('last_report_id', Types::BIGINT, ['unsigned' => true]);
+            $installations->addColumn('last_period_start', Types::DATETIME_IMMUTABLE);
+            $installations->addColumn('last_period_end', Types::DATETIME_IMMUTABLE);
             $installations->setPrimaryKey(['id']);
             $installations->addUniqueIndex(['application', 'installation_id'], 'usage_stats_installation_identity');
             $installations->addIndex(['application', 'last_seen_at'], 'usage_stats_active_installations');
