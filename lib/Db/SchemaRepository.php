@@ -33,12 +33,17 @@ final readonly class SchemaRepository {
 
     /** @return array<string,mixed>|null */
     public function findMetric(string $application, string $category, string $key): ?array {
+        $identity = MetricIdentity::fromParts($category, $key);
         foreach ($this->findAll($application) as $definition) {
             foreach ($definition['metrics'] ?? [] as $metric) {
                 if (!is_array($metric)) {
                     continue;
                 }
-                if (($metric['category'] ?? null) === $category && ($metric['key'] ?? null) === $key) {
+                $metricIdentity = MetricIdentity::fromParts(
+                    (string)($metric['category'] ?? ''),
+                    (string)($metric['key'] ?? ''),
+                );
+                if ($metricIdentity === $identity) {
                     return $metric;
                 }
             }
@@ -128,7 +133,7 @@ final readonly class SchemaRepository {
 
     /** @return array<string,mixed>|null */
     private function decodeDefinition(mixed $definition): ?array {
-        $decoded = json_decode((string)$definition, true, 512, JSON_THROW_ON_ERROR);
+        $decoded = json_decode((string)$definition, true, flags: JSON_THROW_ON_ERROR);
         return is_array($decoded) ? $decoded : null;
     }
 
