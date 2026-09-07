@@ -8,10 +8,10 @@ Feature: usage statistics OCS API
       | metrics       | [{"category":"server","key":"version","type":"string","kind":"snapshot","aggregation":"distribution","description":"Application version","required":true}] |
     Then the response should have a status code 201
     And the response should be a JSON array with the following mandatory values
-      | key                      | value        |
-      | (jq).ocs.data.application | behat_schema |
-      | (jq).ocs.data.schemaVersion | 1          |
-      | (jq).ocs.data.status     | created      |
+      | key                         | value        |
+      | (jq).ocs.data.application   | behat_schema |
+      | (jq).ocs.data.schemaVersion | 1            |
+      | (jq).ocs.data.status        | created      |
     When sending "get" to ocs "/apps/usage_statistics_server/api/v1/admin/schemas/behat_schema/1"
     Then the response should have a status code 200
     And the response should be a JSON array with the following mandatory values
@@ -161,16 +161,24 @@ Feature: usage statistics OCS API
     When sending "get" to ocs "/apps/usage_statistics_server/api/v1/admin/applications/behat_statistics/metrics/server/version/distribution"
     Then the response should have a status code 200
     And the response should be a JSON array with the following mandatory values
-      | key                                  | value |
-      | (jq).ocs.data.values[0].value         | 1.2.3 |
-      | (jq).ocs.data.values[0].count         | 1     |
+      | key                          | value |
+      | (jq).ocs.data.values[0].value | 1.2.3 |
+      | (jq).ocs.data.values[0].count | 1     |
     When sending "get" to ocs "/apps/usage_statistics_server/api/v1/admin/applications/behat_statistics/metrics/usage/requests_completed/numerical"
     Then the response should have a status code 200
     And the response should be a JSON array with the following mandatory values
-      | key                                      | value |
-      | (jq).ocs.data.statistics.count            | 1     |
-      | (jq).ocs.data.statistics.average          | 7     |
-      | (jq).ocs.data.statistics.total            | 7     |
+      | key                            | value |
+      | (jq).ocs.data.statistics.count   | 1     |
+      | (jq).ocs.data.statistics.average | 7     |
+      | (jq).ocs.data.statistics.total   | 7     |
+
+  Scenario: historical range requires RFC3339
+    Given as user "admin"
+    When sending "get" to ocs "/apps/usage_statistics_server/api/v1/admin/applications/behat_statistics/metrics/usage/requests_completed/numerical/history?from=2026-09-01"
+    Then the response should have a status code 400
+    And the response should be a JSON array with the following mandatory values
+      | key                 | value         |
+      | (jq).ocs.data.error | invalid_range |
 
   Scenario: non-admin user cannot access administration endpoints
     Given user "behat-user" exists
@@ -186,5 +194,5 @@ Feature: usage statistics OCS API
       | retentionDays | 365 |
     Then the response should have a status code 200
     And the response should be a JSON array with the following mandatory values
-      | key                          | value |
-      | (jq).ocs.data.retentionDays  | 365   |
+      | key                         | value |
+      | (jq).ocs.data.retentionDays | 365   |
