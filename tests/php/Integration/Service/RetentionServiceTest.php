@@ -80,7 +80,7 @@ final class RetentionServiceTest extends TestCase {
             ]],
         ];
 
-        return $this->reports->store($this->factory->fromPayload($payload), $payload)['id'];
+        return $this->reports->store($this->factory->fromPayload($payload))['id'];
     }
 
     private function setReportReceivedAt(int $reportId, string $date): void {
