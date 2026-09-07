@@ -61,7 +61,7 @@ final class ReportFactory {
             $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', self::MAX_KEY_LENGTH);
             $type = $rawMetric['type'] ?? null;
             $value = $rawMetric['value'] ?? null;
-            $identity = $category . ':' . $key;
+            $identity = MetricIdentity::fromParts($category, $key);
             if (isset($seen[$identity])) {
                 throw new InvalidReport('Duplicate metric.');
             }
