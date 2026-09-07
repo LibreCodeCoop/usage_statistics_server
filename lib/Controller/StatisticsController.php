@@ -43,7 +43,16 @@ final class StatisticsController extends OCSController {
         ]);
     }
 
-    public function history(
+    public function numerical(string $application, string $category, string $key): DataResponse {
+        return new DataResponse([
+            'application' => $application,
+            'category' => $category,
+            'key' => $key,
+            'statistics' => $this->statistics->currentNumericalEvaluation($application, $category, $key),
+        ]);
+    }
+
+    public function numericalHistory(
         string $application,
         string $category,
         string $key,
@@ -65,7 +74,7 @@ final class StatisticsController extends OCSController {
             'key' => $key,
             'from' => $range['from']->format(DATE_ATOM),
             'to' => $range['to']->format(DATE_ATOM),
-            'values' => $this->statistics->metricHistory(
+            'periods' => $this->statistics->numericalHistory(
                 $application,
                 $category,
                 $key,
