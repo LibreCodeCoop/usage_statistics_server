@@ -8,7 +8,7 @@
     "php-http/message": "^1.16"
   },
   "scripts": {
-    "behat": "@php -d error_reporting=8191 vendor/bin/behat -f junit -f pretty --colors"
+    "behat": "@php -d error_reporting=24575 vendor/bin/behat -f junit -f pretty --colors"
   },
   "config": {
     "allow-plugins": {
