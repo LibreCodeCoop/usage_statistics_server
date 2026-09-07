@@ -25,7 +25,7 @@
     },
     "scripts": {
         "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './vendor-bin/*' -not -path './node_modules/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l",
-        "mutation:test": "vendor/bin/infection --configuration=infection.json5",
+        "mutation:test": "php vendor-bin/infection/vendor/infection/infection/bin/infection --configuration=infection.json5",
         "openapi": "generate-spec --verbose && npm run typescript:generate",
         "psalm": "psalm --no-cache --threads=$(nproc)",
         "test:unit": "phpunit -c tests/php/phpunit.xml --testsuite unit --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations",
