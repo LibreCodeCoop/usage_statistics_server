@@ -58,53 +58,15 @@ final readonly class StatisticsRepository {
                 return $countComparison;
             }
 
-            return (string)$left['value'] <=> (string)$right['value'];
+            return $left['value'] <=> $right['value'];
         });
 
         return $distribution;
     }
 
     /** @return array{count:int,average:float|null,min:float|null,max:float|null,total:float|null} */
-    public function currentNumericalEvaluation(string $application, string $category, string $key): array {
-        $integer = $this->currentNumericalEvaluationForType($application, $category, $key, 'integer', 'value_integer');
-        $number = $this->currentNumericalEvaluationForType($application, $category, $key, 'number', 'value_number');
-
-        return $this->mergeNumericalEvaluations($integer, $number);
-    }
-
-    /** @return list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}> */
-    public function numericalHistory(
-        string $application,
-        string $category,
-        string $key,
-        \DateTimeImmutable $from,
-        \DateTimeImmutable $to,
-    ): array {
-        $history = [];
-
-        foreach ([['integer', 'value_integer'], ['number', 'value_number']] as [$type, $column]) {
-            foreach ($this->numericalHistoryForType($application, $category, $key, $from, $to, $type, $column) as $row) {
-                $identity = $row['periodStart'] . "\0" . $row['periodEnd'];
-                $history[$identity] = isset($history[$identity])
-                    ? $this->mergeHistoricalRows($history[$identity], $row)
-                    : $row;
-            }
-        }
-
-        $rows = $history;
-        usort($rows, static fn (array $left, array $right): int => $left['periodEnd'] <=> $right['periodEnd']);
-
-        return $rows;
-    }
-
-    /** @return array{count:int,total:float|null,min:float|null,max:float|null} */
-    private function currentNumericalEvaluationForType(
-        string $application,
-        string $category,
-        string $key,
-        string $type,
-        string $column,
-    ): array {
+    public function currentNumericalEvaluation(string $application, string $category, string $key, string $type): array {
+        $column = $this->numericalColumn($type);
         $qb = $this->db->getQueryBuilder();
         $row = $qb
             ->select(
@@ -123,27 +85,31 @@ final readonly class StatisticsRepository {
             ->fetchNumeric();
 
         if ($row === false || (int)$row[0] === 0) {
-            return ['count' => 0, 'total' => null, 'min' => null, 'max' => null];
+            return ['count' => 0, 'average' => null, 'min' => null, 'max' => null, 'total' => null];
         }
 
+        $count = (int)$row[0];
+        $total = (float)$row[1];
+
         return [
-            'count' => (int)$row[0],
-            'total' => (float)$row[1],
+            'count' => $count,
+            'average' => round($total / $count, 2),
             'min' => (float)$row[2],
             'max' => (float)$row[3],
+            'total' => $total,
         ];
     }
 
     /** @return list<array{periodStart:string,periodEnd:string,count:int,average:float,min:float,max:float,total:float}> */
-    private function numericalHistoryForType(
+    public function numericalHistory(
         string $application,
         string $category,
         string $key,
+        string $type,
         \DateTimeImmutable $from,
         \DateTimeImmutable $to,
-        string $type,
-        string $column,
     ): array {
+        $column = $this->numericalColumn($type);
         $qb = $this->db->getQueryBuilder();
         $result = $qb
             ->select(
@@ -180,59 +146,16 @@ final readonly class StatisticsRepository {
             ];
         }
 
+        usort($history, static fn (array $left, array $right): int => $left['periodEnd'] <=> $right['periodEnd']);
         return $history;
     }
 
-    /**
-     * @param array{count:int,total:float|null,min:float|null,max:float|null} $left
-     * @param array{count:int,total:float|null,min:float|null,max:float|null} $right
-     * @return array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}
-     */
-    private function mergeNumericalEvaluations(array $left, array $right): array {
-        $count = $left['count'] + $right['count'];
-        if ($count === 0) {
-            return ['count' => 0, 'average' => null, 'min' => null, 'max' => null, 'total' => null];
-        }
-
-        $total = ($left['total'] ?? 0.0) + ($right['total'] ?? 0.0);
-        $mins = array_filter([$left['min'], $right['min']], static fn ($value): bool => $value !== null);
-        $maxs = array_filter([$left['max'], $right['max']], static fn ($value): bool => $value !== null);
-
-        return [
-            'count' => $count,
-            'average' => round($total / $count, 2),
-            'min' => min($mins),
-            'max' => max($maxs),
-            'total' => $total,
-        ];
-    }
-
-    /**
-     * @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $left
-     * @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $right
-     * @return array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}
-     */
-    private function mergeHistoricalRows(array $left, array $right): array {
-        $merged = $this->mergeNumericalEvaluations(
-            [
-                'count' => $left['count'],
-                'total' => $left['total'],
-                'min' => $left['min'],
-                'max' => $left['max'],
-            ],
-            [
-                'count' => $right['count'],
-                'total' => $right['total'],
-                'min' => $right['min'],
-                'max' => $right['max'],
-            ],
-        );
-
-        return [
-            'periodStart' => $left['periodStart'],
-            'periodEnd' => $left['periodEnd'],
-            ...$merged,
-        ];
+    private function numericalColumn(string $type): string {
+        return match ($type) {
+            'integer' => 'value_integer',
+            'number' => 'value_number',
+            default => throw new \InvalidArgumentException('Numerical metrics must use integer or number type.'),
+        };
     }
 
     /** @param array<string,mixed> $row */
