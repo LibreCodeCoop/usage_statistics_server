@@ -7,6 +7,7 @@
         "php": ">=8.3"
     },
     "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
         "nextcloud/ocp": "dev-master",
         "phpunit/phpunit": "^11.5",
         "roave/security-advisories": "dev-latest"
@@ -23,11 +24,29 @@
         }
     },
     "scripts": {
-        "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l",
+        "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './vendor-bin/*' -not -path './node_modules/*' -not -path './build/*' -print0 | xargs -0 -n1 php -l",
+        "openapi": "generate-spec --verbose && npm run typescript:generate",
+        "psalm": "psalm --no-cache --threads=$(nproc)",
         "test:unit": "phpunit -c tests/php/phpunit.xml --testsuite unit --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations",
-        "test:php": "phpunit -c tests/php/phpunit.xml --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations"
+        "test:php": "phpunit -c tests/php/phpunit.xml --no-coverage --colors=always --fail-on-warning --fail-on-risky --display-deprecations --display-phpunit-deprecations",
+        "post-install-cmd": [
+            "@composer bin all install --ansi",
+            "composer dump-autoload -o"
+        ],
+        "post-update-cmd": [
+            "composer dump-autoload"
+        ]
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": true,
+            "forward-command": true
+        }
     },
     "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true
+        },
         "optimize-autoloader": true,
         "sort-packages": true,
         "platform": {
