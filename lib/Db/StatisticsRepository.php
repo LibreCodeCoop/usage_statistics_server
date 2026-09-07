@@ -185,9 +185,10 @@ final readonly class StatisticsRepository {
         return $history;
     }
 
-    /** @param array{count:int,total:float|null,min:float|null,max:float|null} $left
-     *  @param array{count:int,total:float|null,min:float|null,max:float|null} $right
-     *  @return array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}
+    /**
+     * @param array{count:int,total:float|null,min:float|null,max:float|null} $left
+     * @param array{count:int,total:float|null,min:float|null,max:float|null} $right
+     * @return array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}
      */
     private function mergeNumericalEvaluations(array $left, array $right): array {
         $count = $left['count'] + $right['count'];
@@ -206,12 +207,26 @@ final readonly class StatisticsRepository {
         ];
     }
 
-    /** @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $left
-     *  @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $right
-     *  @return array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}
+    /**
+     * @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $left
+     * @param array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null} $right
+     * @return array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}
      */
     private function mergeHistoricalRows(array $left, array $right): array {
-        $merged = $this->mergeNumericalEvaluations($left, $right);
+        $merged = $this->mergeNumericalEvaluations(
+            [
+                'count' => $left['count'],
+                'total' => $left['total'],
+                'min' => $left['min'],
+                'max' => $left['max'],
+            ],
+            [
+                'count' => $right['count'],
+                'total' => $right['total'],
+                'min' => $right['min'],
+                'max' => $right['max'],
+            ],
+        );
 
         return [
             'periodStart' => $left['periodStart'],
