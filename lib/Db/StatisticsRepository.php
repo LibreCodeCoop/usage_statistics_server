@@ -225,10 +225,18 @@ final readonly class StatisticsRepository {
         return match ($row['metric_type']) {
             'integer' => (int)$row['value_integer'],
             'number' => (float)$row['value_number'],
-            'boolean' => (bool)$row['value_boolean'],
+            'boolean' => $this->readBoolean($row['value_boolean']),
             'string' => (string)$row['value_string'],
             default => null,
         };
+    }
+
+    private function readBoolean(mixed $value): bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array($value, [1, '1', 't', 'true'], true);
     }
 
     private function formatDateTime(\DateTimeImmutable $dateTime): string {
