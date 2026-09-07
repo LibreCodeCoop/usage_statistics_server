@@ -6,6 +6,7 @@ namespace OCA\UsageStatisticsServer\Controller;
 
 use OCA\UsageStatisticsServer\Db\ReportRepository;
 use OCA\UsageStatisticsServer\Db\SchemaRepository;
+use OCA\UsageStatisticsServer\Service\ConflictingReport;
 use OCA\UsageStatisticsServer\Service\InvalidReport;
 use OCA\UsageStatisticsServer\Service\ReportFactory;
 use OCA\UsageStatisticsServer\Service\SchemaValidator;
@@ -46,14 +47,13 @@ final class ReportController extends OCSController {
             }
             $this->schemaValidator->validateReport($report, $schema);
 
-            $stored = $this->repository->store($report, $payload);
+            $this->repository->store($report);
         } catch (InvalidReport|\JsonException $e) {
             return new DataResponse(['error' => 'invalid_report', 'message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+        } catch (ConflictingReport $e) {
+            return new DataResponse(['error' => 'conflicting_report', 'message' => $e->getMessage()], Http::STATUS_CONFLICT);
         }
 
-        return new DataResponse([
-            'id' => $stored['id'],
-            'status' => $stored['created'] ? 'created' : 'already_received',
-        ], $stored['created'] ? Http::STATUS_CREATED : Http::STATUS_OK);
+        return new DataResponse(['status' => 'accepted'], Http::STATUS_OK);
     }
 }
