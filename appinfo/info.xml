@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<info>
+    <id>usage_statistics_server</id>
+    <name>Usage Statistics Server</name>
+    <summary>Receive and aggregate privacy-preserving usage statistics.</summary>
+    <description><![CDATA[
+A generic Nextcloud app for receiving, storing, aggregating, and exposing privacy-preserving usage statistics from participating applications.
+    ]]></description>
+    <version>0.1.0</version>
+    <licence>agpl</licence>
+    <author mail="vitor@php.rio">Vitor Mattos</author>
+    <namespace>UsageStatisticsServer</namespace>
+    <category>tools</category>
+    <dependencies>
+        <nextcloud min-version="35" max-version="36"/>
+    </dependencies>
+</info>
