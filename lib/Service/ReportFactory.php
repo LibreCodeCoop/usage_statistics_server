@@ -6,6 +6,11 @@ namespace OCA\UsageStatisticsServer\Service;
 
 final class ReportFactory {
     private const IDENTIFIER_PATTERN = '/^[A-Za-z0-9_.:-]+$/';
+    private const MAX_APPLICATION_LENGTH = 128;
+    private const MAX_INSTALLATION_ID_LENGTH = 128;
+    private const MAX_CATEGORY_LENGTH = 128;
+    private const MAX_KEY_LENGTH = 512;
+    private const MAX_STRING_VALUE_LENGTH = 1024;
     private const MAX_METRICS = 256;
 
     public function fromPayload(array $payload): Report {
@@ -13,8 +18,8 @@ final class ReportFactory {
             throw new InvalidReport('Unsupported protocol version.');
         }
 
-        $application = $this->identifier($payload['application'] ?? null, 'application', 128);
-        $installationId = $this->identifier($payload['installationId'] ?? null, 'installationId', 128);
+        $application = $this->identifier($payload['application'] ?? null, 'application', self::MAX_APPLICATION_LENGTH);
+        $installationId = $this->identifier($payload['installationId'] ?? null, 'installationId', self::MAX_INSTALLATION_ID_LENGTH);
         $schemaVersion = $payload['schemaVersion'] ?? null;
         if (!is_int($schemaVersion) || $schemaVersion < 1) {
             throw new InvalidReport('schemaVersion must be a positive integer.');
@@ -47,8 +52,8 @@ final class ReportFactory {
             if (!is_array($rawMetric)) {
                 throw new InvalidReport('Invalid metric.');
             }
-            $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', 128);
-            $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', 256);
+            $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', self::MAX_CATEGORY_LENGTH);
+            $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', self::MAX_KEY_LENGTH);
             $type = $rawMetric['type'] ?? null;
             $value = $rawMetric['value'] ?? null;
             $identity = $category . ':' . $key;
@@ -59,9 +64,9 @@ final class ReportFactory {
 
             $valid = match ($type) {
                 'integer' => is_int($value),
-                'number' => is_int($value) || is_float($value),
+                'number' => is_int($value) || (is_float($value) && is_finite($value)),
                 'boolean' => is_bool($value),
-                'string' => is_string($value) && strlen($value) <= 1024,
+                'string' => is_string($value) && strlen($value) <= self::MAX_STRING_VALUE_LENGTH,
                 default => false,
             };
             if (!$valid) {
