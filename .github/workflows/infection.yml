@@ -86,7 +86,7 @@ jobs:
           extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, sockets, sqlite, pdo_sqlite, xmlreader, xmlwriter, zip, zlib
           coverage: pcov
           ini-file: development
-          ini-values: disable_functions=, memory_limit=2G
+          ini-values: disable_functions=, memory_limit=2G, pcov.directory=${{ github.workspace }}/apps/${{ env.APP_NAME }}/lib
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -138,6 +138,8 @@ jobs:
           name: infection-results
           path: |
             apps/${{ env.APP_NAME }}/infection.log
+            apps/${{ env.APP_NAME }}/build/coverage/junit.xml
+            apps/${{ env.APP_NAME }}/build/coverage/coverage-xml/index.xml
             apps/${{ env.APP_NAME }}/vendor-bin/infection/composer.lock
           if-no-files-found: ignore
           retention-days: 14
