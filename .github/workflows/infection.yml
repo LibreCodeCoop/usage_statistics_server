@@ -118,12 +118,14 @@ jobs:
           set -o pipefail
           composer mutation:test -- --no-progress --no-interaction 2>&1 | tee infection.log
 
-      - name: Upload Infection log
+      - name: Upload Infection results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: infection-log
-          path: apps/${{ env.APP_NAME }}/infection.log
+          name: infection-results
+          path: |
+            apps/${{ env.APP_NAME }}/infection.log
+            apps/${{ env.APP_NAME }}/vendor-bin/infection/composer.lock
           if-no-files-found: ignore
           retention-days: 14
 
