@@ -35,10 +35,10 @@ final class StatisticsRepositoryTest extends TestCase {
         parent::tearDown();
     }
 
-    public function testCurrentDistributionUsesLatestReportWhileHistoryKeepsAllReports(): void {
-        $this->store('installation-a', '2026-06-01T00:00:00Z', '2026-07-01T00:00:00Z', '1.0.0');
-        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.1.0');
-        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0');
+    public function testCurrentStateAndHistoricalNumericalAggregations(): void {
+        $this->store('installation-a', '2026-06-01T00:00:00Z', '2026-07-01T00:00:00Z', '1.0.0', 10);
+        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.1.0', 20);
+        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 40);
 
         self::assertSame(2, $this->statistics->countActiveInstallations(
             'libresign',
@@ -50,19 +50,37 @@ final class StatisticsRepositoryTest extends TestCase {
             ['value' => '1.1.0', 'count' => 1],
         ], $this->statistics->currentDistribution('libresign', 'server', 'version'));
 
-        $history = $this->statistics->metricHistory(
+        self::assertSame([
+            'count' => 2,
+            'average' => 30.0,
+            'min' => 20.0,
+            'max' => 40.0,
+            'total' => 60.0,
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+
+        $history = $this->statistics->numericalHistory(
             'libresign',
-            'server',
-            'version',
+            'usage',
+            'requests_completed',
             new \DateTimeImmutable('2026-06-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
         );
 
-        self::assertCount(3, $history);
-        self::assertSame(['1.0.0', '1.1.0', '1.0.0'], array_column($history, 'value'));
+        self::assertCount(2, $history);
+        self::assertSame(1, $history[0]['count']);
+        self::assertSame(10.0, $history[0]['total']);
+        self::assertSame(2, $history[1]['count']);
+        self::assertSame(30.0, $history[1]['average']);
+        self::assertSame(60.0, $history[1]['total']);
     }
 
-    private function store(string $installationId, string $start, string $end, string $version): void {
+    private function store(
+        string $installationId,
+        string $start,
+        string $end,
+        string $version,
+        int $requestsCompleted,
+    ): void {
         $payload = [
             'protocolVersion' => 1,
             'application' => 'libresign',
@@ -72,12 +90,20 @@ final class StatisticsRepositoryTest extends TestCase {
                 'start' => $start,
                 'end' => $end,
             ],
-            'metrics' => [[
-                'category' => 'server',
-                'key' => 'version',
-                'type' => 'string',
-                'value' => $version,
-            ]],
+            'metrics' => [
+                [
+                    'category' => 'server',
+                    'key' => 'version',
+                    'type' => 'string',
+                    'value' => $version,
+                ],
+                [
+                    'category' => 'usage',
+                    'key' => 'requests_completed',
+                    'type' => 'integer',
+                    'value' => $requestsCompleted,
+                ],
+            ],
         ];
 
         $this->reports->store($this->factory->fromPayload($payload), $payload);
