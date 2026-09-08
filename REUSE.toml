@@ -36,38 +36,3 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Vitor Mattos"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
-
-# Existing source files are listed explicitly so newly added PHP files still
-# need their own SPDX metadata instead of being hidden by a broad glob.
-[[annotations]]
-path = [
-    "lib/AppInfo/Application.php",
-    "lib/BackgroundJob/CleanupOldData.php",
-    "lib/Controller/ReportController.php",
-    "lib/Controller/SchemaController.php",
-    "lib/Controller/SettingsController.php",
-    "lib/Controller/StatisticsController.php",
-    "lib/Db/ReportRepository.php",
-    "lib/Db/SchemaRepository.php",
-    "lib/Db/StatisticsRepository.php",
-    "lib/Migration/Version010000Date20260908001000.php",
-    "lib/Service/ConflictingReport.php",
-    "lib/Service/InvalidReport.php",
-    "lib/Service/Metric.php",
-    "lib/Service/MetricIdentity.php",
-    "lib/Service/Report.php",
-    "lib/Service/ReportFactory.php",
-    "lib/Service/RetentionService.php",
-    "lib/Service/SchemaValidator.php",
-    "lib/Service/SettingsService.php",
-    "tests/php/Integration/Db/OutOfOrderReportTest.php",
-    "tests/php/Integration/Db/SchemaRepositoryTest.php",
-    "tests/php/Integration/Db/StatisticsRepositoryTest.php",
-    "tests/php/Integration/Service/RetentionServiceTest.php",
-    "tests/php/Unit/Service/MetricIdentityTest.php",
-    "tests/php/Unit/Service/ReportFactoryTest.php",
-    "tests/php/Unit/Service/SchemaValidatorTest.php"
-]
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 Vitor Mattos"
-SPDX-License-Identifier = "AGPL-3.0-or-later"
