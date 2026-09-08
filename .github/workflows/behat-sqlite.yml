@@ -14,21 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.versions.outputs.sparse-matrix }}
-
-    steps:
-      - name: Checkout app metadata
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Get version matrix
-        id: versions
-        uses: icewind1991/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
-
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -53,18 +38,21 @@ jobs:
 
   behat-sqlite:
     runs-on: ubuntu-latest
-    needs: [changes, matrix]
+    needs: changes
     if: needs.changes.outputs.src != 'false'
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
+      matrix:
+        server-version:
+          - stable35
+          - master
 
     env:
       APP_NAME: usage_statistics_server
 
-    name: SQLite PHP ${{ matrix.php-versions }} Nextcloud ${{ matrix.server-versions }}
+    name: SQLite PHP 8.3 Nextcloud ${{ matrix.server-version }}
 
     steps:
       - name: Checkout server
@@ -73,7 +61,7 @@ jobs:
           persist-credentials: false
           submodules: true
           repository: nextcloud/server
-          ref: ${{ matrix.server-versions }}
+          ref: ${{ matrix.server-version }}
 
       - name: Checkout app
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -81,10 +69,10 @@ jobs:
           persist-credentials: false
           path: apps/${{ env.APP_NAME }}
 
-      - name: Set up PHP ${{ matrix.php-versions }}
+      - name: Set up PHP 8.3
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: '8.3'
           extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, sockets, sqlite, pdo_sqlite, xmlreader, xmlwriter, zip, zlib
           coverage: none
           ini-file: development
@@ -97,7 +85,7 @@ jobs:
         run: |
           composer remove nextcloud/ocp --dev --no-scripts
           composer install --no-dev --no-scripts
-          composer --working-dir=tests/integration install
+          composer --working-dir=tests/integration install --prefer-dist --no-progress
 
       - name: Set up Nextcloud
         run: |
@@ -126,7 +114,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: behat-results-${{ matrix.server-versions }}-php${{ matrix.php-versions }}
+          name: behat-results-${{ matrix.server-version }}-php8.3
           path: apps/${{ env.APP_NAME }}/tests/integration/output/
           if-no-files-found: ignore
           retention-days: 30
