@@ -62,10 +62,10 @@ final class ReportFactory {
             $type = $rawMetric['type'] ?? null;
             $value = $rawMetric['value'] ?? null;
             $identity = MetricIdentity::fromParts($category, $key);
-            if (isset($seen[$identity])) {
+            if (array_key_exists($identity, $seen)) {
                 throw new InvalidReport('Duplicate metric.');
             }
-            $seen[$identity] = true;
+            $seen[$identity] = null;
 
             $valid = match ($type) {
                 'integer' => is_int($value),
