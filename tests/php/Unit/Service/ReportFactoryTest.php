@@ -86,6 +86,17 @@ final class ReportFactoryTest extends TestCase {
         yield 'too much precision' => ['2026-08-01T00:00:00.1234567Z'];
     }
 
+    public function testRejectsNormalizedInvalidCalendarDateBeforePeriodValidation(): void {
+        $payload = $this->validPayload();
+        $payload['period'] = [
+            'start' => '2026-02-30T00:00:00Z',
+            'end' => '2026-03-03T00:00:00Z',
+        ];
+
+        $this->expectException(InvalidReport::class);
+        (new ReportFactory())->fromPayload($payload);
+    }
+
     #[DataProvider('invalidPeriodContainerProvider')]
     public function testRejectsInvalidPeriodContainer(mixed $period): void {
         $payload = $this->validPayload();
