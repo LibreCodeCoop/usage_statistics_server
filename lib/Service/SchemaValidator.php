@@ -10,7 +10,10 @@ final class SchemaValidator {
     private const KINDS = ['snapshot', 'period', 'counter', 'categorical'];
     private const AGGREGATIONS = ['distribution', 'numerical', 'none'];
 
-    /** @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $definition
+     * @return array{application:string,schemaVersion:int,metrics:list<array{category:string,key:string,type:string,kind:string,aggregation:string,description:string,required:bool}>}
+     */
     public function validateDefinition(array $definition): array {
         if (array_is_list($definition)) {
             throw new InvalidReport('Schema definition must be an object.');
@@ -90,6 +93,7 @@ final class SchemaValidator {
         ];
     }
 
+    /** @param array<string,mixed> $definition */
     public function validateReport(Report $report, array $definition): void {
         if (($definition['application'] ?? null) !== $report->application
             || ($definition['schemaVersion'] ?? null) !== $report->schemaVersion) {
