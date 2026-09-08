@@ -52,12 +52,24 @@ final class StatisticsRepositoryTest extends TestCase {
         ], $this->statistics->currentDistribution('libresign', 'server', 'version'));
 
         self::assertSame([
+            ['value' => true, 'count' => 2],
+        ], $this->statistics->currentDistribution('libresign', 'features', 'enabled'));
+
+        self::assertSame([
             'count' => 2,
             'average' => 30.0,
             'min' => 20.0,
             'max' => 40.0,
             'total' => 60.0,
         ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+
+        self::assertSame([
+            'count' => 2,
+            'average' => 1.5,
+            'min' => 1.5,
+            'max' => 1.5,
+            'total' => 3.0,
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'average_size'));
 
         $history = $this->statistics->numericalHistory(
             'libresign',
@@ -85,15 +97,27 @@ final class StatisticsRepositoryTest extends TestCase {
             ->executeQuery()
             ->fetchAllAssociative();
 
-        self::assertCount(2, $rows);
+        self::assertCount(4, $rows);
 
-        $integer = array_values(array_filter($rows, static fn (array $row): bool => $row['metric_type'] === 'integer'))[0];
+        $integer = $this->findMetricRow($rows, 'integer');
         self::assertSame(20, (int)$integer['value_integer']);
         self::assertNull($integer['value_number']);
         self::assertNull($integer['value_boolean']);
         self::assertNull($integer['value_string']);
 
-        $string = array_values(array_filter($rows, static fn (array $row): bool => $row['metric_type'] === 'string'))[0];
+        $number = $this->findMetricRow($rows, 'number');
+        self::assertSame(1.5, (float)$number['value_number']);
+        self::assertNull($number['value_integer']);
+        self::assertNull($number['value_boolean']);
+        self::assertNull($number['value_string']);
+
+        $boolean = $this->findMetricRow($rows, 'boolean');
+        self::assertTrue($this->toBoolean($boolean['value_boolean']));
+        self::assertNull($boolean['value_integer']);
+        self::assertNull($boolean['value_number']);
+        self::assertNull($boolean['value_string']);
+
+        $string = $this->findMetricRow($rows, 'string');
         self::assertSame('1.1.0', $string['value_string']);
         self::assertNull($string['value_integer']);
         self::assertNull($string['value_number']);
@@ -108,6 +132,17 @@ final class StatisticsRepositoryTest extends TestCase {
 
         $this->expectException(ConflictingReport::class);
         $this->reports->store($this->factory->fromPayload($conflicting));
+    }
+
+    public function testSameLogicalReportIsIdempotent(): void {
+        $payload = $this->payload('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.1.0', 20, 1);
+        $report = $this->factory->fromPayload($payload);
+
+        self::assertTrue($this->reports->store($report)['created']);
+        self::assertFalse($this->reports->store($report)['created']);
+
+        $qb = $this->db->getQueryBuilder();
+        self::assertSame(1, (int)$qb->select($qb->func()->count())->from('usage_stats_reports')->executeQuery()->fetchOne());
     }
 
     private function store(
@@ -152,8 +187,35 @@ final class StatisticsRepositoryTest extends TestCase {
                     'type' => 'integer',
                     'value' => $requestsCompleted,
                 ],
+                [
+                    'category' => 'usage',
+                    'key' => 'average_size',
+                    'type' => 'number',
+                    'value' => 1.5,
+                ],
+                [
+                    'category' => 'features',
+                    'key' => 'enabled',
+                    'type' => 'boolean',
+                    'value' => true,
+                ],
             ],
         ];
+    }
+
+    /** @param list<array<string,mixed>> $rows
+     *  @return array<string,mixed>
+     */
+    private function findMetricRow(array $rows, string $type): array {
+        return array_values(array_filter($rows, static fn (array $row): bool => $row['metric_type'] === $type))[0];
+    }
+
+    private function toBoolean(mixed $value): bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array($value, [1, '1', 't', 'true'], true);
     }
 
     private function truncateTables(): void {
