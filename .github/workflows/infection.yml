@@ -19,7 +19,6 @@ jobs:
     outputs:
       php-min: ${{ steps.versions.outputs.php-min }}
       php-max: ${{ steps.versions.outputs.php-max }}
-      php-available: ${{ steps.versions.outputs.php-available }}
       branches-max: ${{ steps.versions.outputs.branches-max }}
 
     steps:
@@ -109,6 +108,20 @@ jobs:
             --admin-pass admin
           ./occ app:enable --force ${{ env.APP_NAME }}
 
+      - name: Generate mutation coverage
+        working-directory: apps/${{ env.APP_NAME }}
+        env:
+          XDEBUG_MODE: coverage
+        run: |
+          mkdir -p build/coverage/coverage-xml
+          vendor/bin/phpunit -c tests/php/phpunit.xml \
+            --coverage-xml build/coverage/coverage-xml \
+            --log-junit build/coverage/junit.xml \
+            --colors=always \
+            --fail-on-warning \
+            --fail-on-risky
+          php -r '$xml = new DOMDocument(); if (!$xml->load("build/coverage/coverage-xml/index.xml")) { exit(1); }'
+
       - name: Run Infection
         working-directory: apps/${{ env.APP_NAME }}
         env:
@@ -116,7 +129,12 @@ jobs:
           XDEBUG_MODE: coverage
         run: |
           set -o pipefail
-          composer mutation:test -- --no-progress --no-interaction 2>&1 | tee infection.log
+          composer mutation:test -- \
+            --coverage=build/coverage \
+            --skip-initial-tests \
+            --threads=max \
+            --no-progress \
+            --no-interaction 2>&1 | tee infection.log
 
       - name: Upload Infection results
         if: always()
@@ -125,6 +143,8 @@ jobs:
           name: infection-results
           path: |
             apps/${{ env.APP_NAME }}/infection.log
+            apps/${{ env.APP_NAME }}/build/coverage/junit.xml
+            apps/${{ env.APP_NAME }}/build/coverage/coverage-xml/index.xml
             apps/${{ env.APP_NAME }}/vendor-bin/infection/composer.lock
           if-no-files-found: ignore
           retention-days: 14
