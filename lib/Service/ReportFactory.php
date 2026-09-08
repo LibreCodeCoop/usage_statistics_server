@@ -35,9 +35,6 @@ final class ReportFactory {
         if (!is_array($period)) {
             throw new InvalidReport('period is required.');
         }
-        if (array_is_list($period)) {
-            throw new InvalidReport('period must be a JSON object.');
-        }
         $this->assertAllowedKeys($period, ['start', 'end'], 'period');
 
         $start = $this->parseRfc3339($period['start'] ?? null);
@@ -59,9 +56,6 @@ final class ReportFactory {
         $seen = [];
         foreach ($rawMetrics as $rawMetric) {
             if (!is_array($rawMetric)) {
-                throw new InvalidReport('Invalid metric.');
-            }
-            if (array_is_list($rawMetric)) {
                 throw new InvalidReport('Invalid metric.');
             }
             $this->assertAllowedKeys($rawMetric, ['category', 'key', 'type', 'value'], 'metric');
