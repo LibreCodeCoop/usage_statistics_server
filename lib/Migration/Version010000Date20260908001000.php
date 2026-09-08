@@ -20,7 +20,6 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
             $installations->addColumn('id', Types::BIGINT, ['autoincrement' => true, 'unsigned' => true]);
             $installations->addColumn('application', Types::STRING, ['length' => 128]);
             $installations->addColumn('installation_id', Types::STRING, ['length' => 128]);
-            $installations->addColumn('first_seen_at', Types::DATETIME_IMMUTABLE);
             $installations->addColumn('last_seen_at', Types::DATETIME_IMMUTABLE);
             $installations->addColumn('last_report_id', Types::BIGINT, ['unsigned' => true]);
             $installations->setPrimaryKey(['id']);
