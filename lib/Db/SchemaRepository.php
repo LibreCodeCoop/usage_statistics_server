@@ -53,6 +53,7 @@ final readonly class SchemaRepository {
     }
 
     /**
+     * @param array<string,mixed> $definition
      * @return bool true when created, false when the same definition already exists
      * @throws \LogicException when the version already exists with a different definition
      */
