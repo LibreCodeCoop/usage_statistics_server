@@ -30,8 +30,10 @@ final class StatisticsController extends OCSController {
      * @param string $application Stable application identifier
      *
      * @return DataResponse<Http::STATUS_OK, array{application:string,activeWindowDays:int,activeInstallations:int}, array{}>
+     *
+     * 200: Application usage statistics summary
      */
-    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/{application}', requirements: ['apiVersion' => '(v1)'])]
+    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}', requirements: ['apiVersion' => '(v1)'])]
     public function summary(string $application): DataResponse {
         $since = new \DateTimeImmutable(
             sprintf('-%d days', self::ACTIVE_WINDOW_DAYS),
@@ -53,8 +55,10 @@ final class StatisticsController extends OCSController {
      * @param string $key Metric key
      *
      * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,values:list<array{value:mixed,count:int}>}, array{}>
+     *
+     * 200: Current metric distribution
      */
-    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/{application}/metrics/{category}/{key}/distribution', requirements: ['apiVersion' => '(v1)'])]
+    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/distribution', requirements: ['apiVersion' => '(v1)'])]
     public function distribution(string $application, string $category, string $key): DataResponse {
         return new DataResponse([
             'application' => $application,
@@ -72,8 +76,10 @@ final class StatisticsController extends OCSController {
      * @param string $key Metric key
      *
      * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,statistics:array{count:int,average:float|null,min:float|null,max:float|null,total:float|null}}, array{}>
+     *
+     * 200: Current numerical metric evaluation
      */
-    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/{application}/metrics/{category}/{key}/numerical', requirements: ['apiVersion' => '(v1)'])]
+    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/numerical', requirements: ['apiVersion' => '(v1)'])]
     public function numerical(string $application, string $category, string $key): DataResponse {
         return new DataResponse([
             'application' => $application,
@@ -93,8 +99,11 @@ final class StatisticsController extends OCSController {
      * @param string $to Optional ISO 8601 upper bound
      *
      * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,from:string,to:string,periods:list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}>}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST, array{error:string,message:string}, array{}>
+     *
+     * 200: Historical numerical metric evaluation
+     * 400: Invalid date range
      */
-    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/{application}/metrics/{category}/{key}/numerical/history', requirements: ['apiVersion' => '(v1)'])]
+    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/applications/{application}/metrics/{category}/{key}/numerical/history', requirements: ['apiVersion' => '(v1)'])]
     public function numericalHistory(
         string $application,
         string $category,
