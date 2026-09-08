@@ -47,6 +47,10 @@ final class ReportController extends OCSController {
      * @param list<array{category:string,key:string,type:string,value:string|int|float|bool}> $metrics Aggregate metric values
      *
      * @return DataResponse<Http::STATUS_OK, array{status:string}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_CONFLICT, array{error:string,message:string}, array{}>
+     *
+     * 200: Report accepted
+     * 400: Invalid report
+     * 409: Conflicting report for the reporting period
      */
     #[PublicPage]
     #[NoCSRFRequired]
