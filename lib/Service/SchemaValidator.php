@@ -11,7 +11,7 @@ final class SchemaValidator {
     private const AGGREGATIONS = ['distribution', 'numerical', 'none'];
 
     /**
-     * @param array<string,mixed> $definition
+     * @param array<mixed> $definition
      * @return array{application:string,schemaVersion:int,metrics:list<array{category:string,key:string,type:string,kind:string,aggregation:string,description:string,required:bool}>}
      */
     public function validateDefinition(array $definition): array {
