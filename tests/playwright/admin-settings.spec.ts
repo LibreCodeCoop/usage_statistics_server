@@ -7,27 +7,35 @@ import type { Page } from '@playwright/test'
 
 import { expect, test } from '@playwright/test'
 
+const adminSettingsUrl = '/index.php/settings/admin/usage-statistics-server'
+
 /**
  * Sign in as the test administrator.
+ *
+ * The Nextcloud dashboard loads many secondary resources. Waiting for the
+ * complete load event makes the test depend on all of them, while the login
+ * itself is complete as soon as Nextcloud redirects the browser.
  *
  * @param page Playwright page
  */
 async function login(page: Page): Promise<void> {
-	await page.goto('/index.php/login')
+	await page.goto('/index.php/login', { waitUntil: 'domcontentloaded' })
 	await page.locator('#user').fill('admin')
 	await page.locator('#password').fill('admin')
-	await page.locator('button[type="submit"]').click()
-	await page.waitForURL(/\/index\.php\/apps\/|\/index\.php\/settings\/user/)
+
+	await Promise.all([
+		page.waitForURL(/\/index\.php\/apps\//),
+		page.locator('button[type="submit"]').click(),
+	])
 }
 
 /**
- * Open the app administration settings through the Nextcloud settings navigation.
+ * Open the application administration page directly.
  *
  * @param page Playwright page
  */
 async function openAdminSettings(page: Page): Promise<void> {
-	await page.goto('/index.php/settings/admin/overview')
-	await page.getByRole('link', { name: 'Usage Statistics', exact: true }).click()
+	await page.goto(adminSettingsUrl, { waitUntil: 'domcontentloaded' })
 	await expect(page).toHaveURL(/\/index\.php\/settings\/admin\/usage-statistics-server$/)
 	await expect(page.getByRole('heading', { name: 'Data retention' })).toBeVisible()
 }
@@ -49,7 +57,7 @@ test('administrator can persist the retention period', async ({ page }) => {
 	await saveButton.click()
 	await expect(page.getByText('Settings saved.')).toBeVisible()
 
-	await page.reload()
+	await page.reload({ waitUntil: 'domcontentloaded' })
 	await expect(page.getByLabel('Retention period (days)')).toHaveValue(updatedValue)
 
 	// Restore the value that was present when the test started so retries and
