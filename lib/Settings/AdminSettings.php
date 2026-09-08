@@ -16,6 +16,9 @@ use OCP\Util;
 use Override;
 
 final class AdminSettings implements ISettings {
+    /**
+     * @return TemplateResponse<200, array{}>
+     */
     #[Override]
     public function getForm(): TemplateResponse {
         Util::addScript(Application::APP_ID, 'usage-statistics-server-settings');

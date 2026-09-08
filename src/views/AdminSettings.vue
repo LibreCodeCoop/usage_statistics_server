@@ -19,10 +19,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 				:min="minimumRetentionDays"
 				:max="maximumRetentionDays"
 				:disabled="loading || saving"
-				:help-text="t('usage_statistics_server', 'Reports older than this period are removed by the daily cleanup job.')" />
+				:helpText="t('usage_statistics_server', 'Reports older than this period are removed by the daily cleanup job.')" />
 
 			<p class="retention-settings__range">
-				{{ t('usage_statistics_server', 'Allowed range: {min} to {max} days.', { min: minimumRetentionDays, max: maximumRetentionDays }) }}
+				{{ t('usage_statistics_server', 'Allowed range: {minimum} to {maximum} days.', { minimum: minimumRetentionDays, maximum: maximumRetentionDays }) }}
 			</p>
 
 			<NcButton
@@ -43,15 +43,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-
 import { translate as t } from '@nextcloud/l10n'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
-
-import { getServerSettings, updateServerSettings } from '../api/settings'
+import { computed, onMounted, ref } from 'vue'
+import { getServerSettings, updateServerSettings } from '../api/settings.ts'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -85,6 +83,9 @@ onMounted(async () => {
 	}
 })
 
+/**
+ * Persist the retention period selected by the administrator.
+ */
 async function save(): Promise<void> {
 	if (!canSave.value) {
 		return

@@ -20,6 +20,9 @@ interface OcsResponse<T> {
 
 const settingsUrl = generateOcsUrl('/apps/usage_statistics_server/api/v1/admin/settings')
 
+/**
+ * Load the current server settings.
+ */
 export async function getServerSettings(): Promise<ServerSettings> {
 	const response = await axios.get<OcsResponse<ServerSettings>>(settingsUrl, {
 		headers: { 'OCS-APIRequest': 'true' },
@@ -27,6 +30,11 @@ export async function getServerSettings(): Promise<ServerSettings> {
 	return response.data.ocs.data
 }
 
+/**
+ * Update the report retention period.
+ *
+ * @param retentionDays Retention period in days
+ */
 export async function updateServerSettings(retentionDays: number): Promise<number> {
 	const response = await axios.put<OcsResponse<{ retentionDays: number }>>(
 		settingsUrl,

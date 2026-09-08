@@ -3,9 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-async function login(page: import('@playwright/test').Page): Promise<void> {
+/**
+ * Sign in as the test administrator.
+ *
+ * @param page Playwright page
+ */
+async function login(page: Page): Promise<void> {
 	await page.goto('/index.php/login')
 	await page.locator('#user').fill('admin')
 	await page.locator('#password').fill('admin')
