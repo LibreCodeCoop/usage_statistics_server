@@ -37,21 +37,15 @@ The ingestion protocol is application-agnostic. Metric values are typed and sche
 
 The server does not treat submitted data as an audited census. Reports come from software running on infrastructure controlled by the sender, so aggregated results should be described as statistics reported by participating installations.
 
+Server administrators can configure data retention from the Nextcloud administration settings or with the `usage-statistics-server:retention:*` OCC commands.
+
 ## Documentation
 
 Start here if you want to integrate another Nextcloud app:
 
-- [Protocol v1](docs/protocol-v1.md) — report format, validation rules, and ingestion behavior.
-- [Application schemas](docs/application-schemas.md) — how applications define metrics and evolve schemas.
-- [Administrative API](docs/admin-api.md) — endpoints for querying aggregated statistics.
-- [Retention](docs/retention.md) — historical data retention and cleanup behavior.
+- [Protocol v1](docs/protocol-v1.md): report format, validation rules, and ingestion behavior.
+- [Application schemas](docs/application-schemas.md): how applications define metrics and evolve schemas.
+- [Administrative API](docs/admin-api.md): endpoints for querying aggregated statistics.
+- [Retention](docs/retention.md): historical data retention and cleanup behavior.
 
 The OpenAPI specifications are generated from the Nextcloud controller contracts and are kept in the repository for API consumers and generated types.
-
-## Current support
-
-The app currently targets Nextcloud 35 and 36 and is tested with SQLite, MySQL, MariaDB, and PostgreSQL.
-
-## License
-
-Usage Statistics Server is licensed under the GNU Affero General Public License v3 or later. See [COPYING](COPYING).
