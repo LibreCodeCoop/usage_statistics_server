@@ -4,7 +4,12 @@
 Feature: configure Usage Statistics Server with OCC
 
   Scenario: read and update the retention period
-    Given run the command "usage-statistics-server:retention:get"
+    Given run the command "usage-statistics-server:retention:set 1095"
+    Then the output of the last command should locally contain the following text:
+      """
+      Retention period set to 1095 days
+      """
+    When run the command "usage-statistics-server:retention:get"
     Then the output of the last command should locally contain the following text:
       """
       Retention period: 1095 days
