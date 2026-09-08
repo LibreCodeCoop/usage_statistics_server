@@ -56,6 +56,15 @@ final class StatisticsRepositoryTest extends TestCase {
         ], $this->statistics->currentDistribution('libresign', 'features', 'enabled'));
 
         self::assertSame([
+            ['value' => 20, 'count' => 1],
+            ['value' => 40, 'count' => 1],
+        ], $this->statistics->currentDistribution('libresign', 'usage', 'requests_completed'));
+
+        self::assertSame([
+            ['value' => 1.5, 'count' => 2],
+        ], $this->statistics->currentDistribution('libresign', 'usage', 'average_size'));
+
+        self::assertSame([
             'count' => 2,
             'average' => 30.0,
             'min' => 20.0,
@@ -102,15 +111,17 @@ final class StatisticsRepositoryTest extends TestCase {
     }
 
     public function testDistributionIsSortedByCountThenValue(): void {
-        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '2.0.0', 1);
-        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 2);
-        $this->store('installation-c', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 3);
-        $this->store('installation-d', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '3.0.0', 4);
+        $this->store('installation-a', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '1.0.0', 1);
+        $this->store('installation-b', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '2.0.0', 2);
+        $this->store('installation-c', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '2.0.0', 3);
+        $this->store('installation-d', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '2.0.0', 4);
+        $this->store('installation-e', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '3.0.0', 5);
+        $this->store('installation-f', '2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z', '3.0.0', 6);
 
         self::assertSame([
-            ['value' => '1.0.0', 'count' => 2],
-            ['value' => '2.0.0', 'count' => 1],
-            ['value' => '3.0.0', 'count' => 1],
+            ['value' => '2.0.0', 'count' => 3],
+            ['value' => '3.0.0', 'count' => 2],
+            ['value' => '1.0.0', 'count' => 1],
         ], $this->statistics->currentDistribution('libresign', 'server', 'version'));
     }
 
@@ -126,6 +137,22 @@ final class StatisticsRepositoryTest extends TestCase {
             'max' => 11.0,
             'total' => 32.0,
         ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+
+        self::assertSame([[
+            'periodStart' => '2026-07-01 00:00:00',
+            'periodEnd' => '2026-08-01 00:00:00',
+            'count' => 3,
+            'average' => 10.67,
+            'min' => 10.0,
+            'max' => 11.0,
+            'total' => 32.0,
+        ]], $this->statistics->numericalHistory(
+            'libresign',
+            'usage',
+            'requests_completed',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        ));
     }
 
     public function testEmptyNumericalEvaluationUsesNullForDerivedValues(): void {
