@@ -30,7 +30,7 @@ final class SchemaController extends OCSController {
             }
 
             $definition = $this->validator->validateDefinition($payload);
-            $this->schemas->store(
+            $created = $this->schemas->store(
                 $definition['application'],
                 $definition['schemaVersion'],
                 $definition,
@@ -40,13 +40,18 @@ final class SchemaController extends OCSController {
                 'error' => 'invalid_schema',
                 'message' => $e->getMessage(),
             ], Http::STATUS_BAD_REQUEST);
+        } catch (\LogicException $e) {
+            return new DataResponse([
+                'error' => 'schema_conflict',
+                'message' => $e->getMessage(),
+            ], Http::STATUS_CONFLICT);
         }
 
         return new DataResponse([
             'application' => $definition['application'],
             'schemaVersion' => $definition['schemaVersion'],
-            'status' => 'stored',
-        ], Http::STATUS_CREATED);
+            'status' => $created ? 'created' : 'already_registered',
+        ], $created ? Http::STATUS_CREATED : Http::STATUS_OK);
     }
 
     public function get(string $application, int $schemaVersion): DataResponse {
