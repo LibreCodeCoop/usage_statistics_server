@@ -8,6 +8,8 @@ use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 final readonly class SchemaRepository {
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     public function __construct(private IDBConnection $db) {
     }
 
@@ -47,12 +49,17 @@ final readonly class SchemaRepository {
             'application' => $qb->createNamedParameter($application),
             'schema_version' => $qb->createNamedParameter($schemaVersion, IQueryBuilder::PARAM_INT),
             'definition' => $qb->createNamedParameter(json_encode($definition, JSON_THROW_ON_ERROR)),
-            'created_at' => $qb->createNamedParameter(
+            'created_at' => $qb->createNamedParameter($this->formatDateTime(
                 new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
-                IQueryBuilder::PARAM_DATETIME_IMMUTABLE,
-            ),
+            )),
         ])->executeStatement();
 
         return true;
+    }
+
+    private function formatDateTime(\DateTimeImmutable $dateTime): string {
+        return $dateTime
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format(self::DB_DATETIME_FORMAT);
     }
 }
