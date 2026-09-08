@@ -21,7 +21,7 @@ final class CleanupOldData extends TimedJob {
     }
 
     #[\Override]
-    protected function run($argument): void {
+    protected function run(mixed $argument): void {
         $retentionDays = $this->settings->getRetentionDays();
         $cutoff = (new \DateTimeImmutable('@' . ($this->time->getTime() - ($retentionDays * 86400))))
             ->setTimezone(new \DateTimeZone('UTC'));
