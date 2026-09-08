@@ -38,7 +38,7 @@ final class SchemaValidator {
 
             $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', 128);
             $key = $this->identifier($rawMetric['key'] ?? null, 'metric key', 512);
-            $identity = $category . ':' . $key;
+            $identity = MetricIdentity::fromParts($category, $key);
             if (isset($seen[$identity])) {
                 throw new InvalidReport('Duplicate schema metric.');
             }
@@ -99,7 +99,7 @@ final class SchemaValidator {
             if (!is_array($metric)) {
                 throw new InvalidReport('Invalid registered application schema.');
             }
-            $identity = ($metric['category'] ?? '') . ':' . ($metric['key'] ?? '');
+            $identity = MetricIdentity::fromParts((string)($metric['category'] ?? ''), (string)($metric['key'] ?? ''));
             $allowed[$identity] = $metric;
             if (($metric['required'] ?? false) === true) {
                 $required[$identity] = true;
@@ -107,7 +107,7 @@ final class SchemaValidator {
         }
 
         foreach ($report->metrics as $metric) {
-            $identity = $metric->category . ':' . $metric->key;
+            $identity = MetricIdentity::fromParts($metric->category, $metric->key);
             $schemaMetric = $allowed[$identity] ?? null;
             if (!is_array($schemaMetric)) {
                 throw new InvalidReport('Report contains a metric that is not registered in the application schema.');
