@@ -1,0 +1,74 @@
+# This workflow is based on the Nextcloud organization workflow template.
+#
+# https://github.com/nextcloud/.github
+# SPDX-FileCopyrightText: 2024 Nextcloud GmbH and Nextcloud contributors
+# SPDX-License-Identifier: MIT
+
+name: OpenAPI
+
+on: pull_request
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openapi-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  openapi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - name: Get php version
+        id: php_versions
+        uses: icewind1991/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ steps.php_versions.outputs.php-available }}
+          extensions: xml
+          coverage: none
+          ini-file: development
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read package.json node and npm engines version
+        uses: skjnldsv/read-package-engines-version-actions@06d6baf7d8f41934ab630e97d9e6c0bc9c9ac5e4 # v3
+        id: node_versions
+        with:
+          fallbackNode: '^24'
+          fallbackNpm: '^11.3'
+
+      - name: Set up node ${{ steps.node_versions.outputs.nodeVersion }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ steps.node_versions.outputs.nodeVersion }}
+
+      - name: Set up npm ${{ steps.node_versions.outputs.npmVersion }}
+        run: npm i -g 'npm@${{ steps.node_versions.outputs.npmVersion }}'
+
+      - name: Install JavaScript dependencies
+        run: npm install
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # v4.0.0
+
+      - name: Regenerate OpenAPI
+        run: composer run openapi
+
+      - name: Check generated OpenAPI and TypeScript files
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo 'Please run "composer run openapi" and commit the generated OpenAPI JSON and TypeScript files.'
+            git status
+            git --no-pager diff -- openapi.json openapi-administration.json openapi-full.json src/types/openapi
+            exit 1
+          fi
