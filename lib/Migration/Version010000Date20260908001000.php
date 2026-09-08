@@ -15,6 +15,19 @@ final class Version010000Date20260908001000 extends SimpleMigrationStep {
         /** @var ISchemaWrapper $schema */
         $schema = $schemaClosure();
 
+        if (!$schema->hasTable('usage_stats_installations')) {
+            $installations = $schema->createTable('usage_stats_installations');
+            $installations->addColumn('id', Types::BIGINT, ['autoincrement' => true, 'unsigned' => true]);
+            $installations->addColumn('application', Types::STRING, ['length' => 128]);
+            $installations->addColumn('installation_id', Types::STRING, ['length' => 128]);
+            $installations->addColumn('first_seen_at', Types::DATETIME_IMMUTABLE);
+            $installations->addColumn('last_seen_at', Types::DATETIME_IMMUTABLE);
+            $installations->addColumn('last_report_id', Types::BIGINT, ['unsigned' => true]);
+            $installations->setPrimaryKey(['id']);
+            $installations->addUniqueIndex(['application', 'installation_id'], 'usage_stats_installation_identity');
+            $installations->addIndex(['application', 'last_seen_at'], 'usage_stats_active_installations');
+        }
+
         if (!$schema->hasTable('usage_stats_reports')) {
             $reports = $schema->createTable('usage_stats_reports');
             $reports->addColumn('id', Types::BIGINT, ['autoincrement' => true, 'unsigned' => true]);
