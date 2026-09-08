@@ -14,6 +14,7 @@ final class ReportFactory {
     private const MAX_STRING_VALUE_LENGTH = 1024;
     private const MAX_METRICS = 256;
 
+    /** @param array<string,mixed> $payload */
     public function fromPayload(array $payload): Report {
         if (array_is_list($payload)) {
             throw new InvalidReport('Request body must be a JSON object.');
