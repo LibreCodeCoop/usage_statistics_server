@@ -16,8 +16,8 @@
     "phpUnit": {
         "configDir": "tests/php"
     },
-    "minMsi": 0,
-    "minCoveredMsi": 0,
+    "minMsi": 97,
+    "minCoveredMsi": 97,
     "mutators": {
         "@default": true
     }
