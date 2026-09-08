@@ -5,8 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <template>
 	<NcSettingsSection
-		name="Data retention"
-		description="Choose how long historical usage reports are kept before automatic cleanup.">
+		:name="t('usage_statistics_server', 'Data retention')"
+		:description="t('usage_statistics_server', 'Choose how long historical usage reports are kept before automatic cleanup.')">
 		<NcNoteCard v-if="loadError" type="error">
 			{{ loadError }}
 		</NcNoteCard>
@@ -14,29 +14,29 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 		<div v-else class="retention-settings">
 			<NcTextField
 				v-model="retentionDays"
-				label="Retention period (days)"
+				:label="t('usage_statistics_server', 'Retention period (days)')"
 				type="number"
 				:min="minimumRetentionDays"
 				:max="maximumRetentionDays"
 				:disabled="loading || saving"
-				help-text="Reports older than this period are removed by the daily cleanup job." />
+				:help-text="t('usage_statistics_server', 'Reports older than this period are removed by the daily cleanup job.')" />
 
 			<p class="retention-settings__range">
-				Allowed range: {{ minimumRetentionDays }} to {{ maximumRetentionDays }} days.
+				{{ t('usage_statistics_server', 'Allowed range: {min} to {max} days.', { min: minimumRetentionDays, max: maximumRetentionDays }) }}
 			</p>
 
 			<NcButton
 				variant="primary"
 				:disabled="!canSave"
 				@click="save">
-				{{ saving ? 'Saving…' : 'Save' }}
+				{{ saving ? t('usage_statistics_server', 'Saving…') : t('usage_statistics_server', 'Save') }}
 			</NcButton>
 
 			<NcNoteCard v-if="saveError" type="error">
 				{{ saveError }}
 			</NcNoteCard>
 			<NcNoteCard v-else-if="saved" type="success">
-				Settings saved.
+				{{ t('usage_statistics_server', 'Settings saved.') }}
 			</NcNoteCard>
 		</div>
 	</NcSettingsSection>
@@ -45,6 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import { translate as t } from '@nextcloud/l10n'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
@@ -78,7 +79,7 @@ onMounted(async () => {
 		minimumRetentionDays.value = settings.minimumRetentionDays
 		maximumRetentionDays.value = settings.maximumRetentionDays
 	} catch {
-		loadError.value = 'Could not load Usage Statistics settings.'
+		loadError.value = t('usage_statistics_server', 'Could not load Usage Statistics settings.')
 	} finally {
 		loading.value = false
 	}
@@ -97,7 +98,7 @@ async function save(): Promise<void> {
 		retentionDays.value = String(savedValue)
 		saved.value = true
 	} catch {
-		saveError.value = 'Could not save Usage Statistics settings.'
+		saveError.value = t('usage_statistics_server', 'Could not save Usage Statistics settings.')
 	} finally {
 		saving.value = false
 	}
