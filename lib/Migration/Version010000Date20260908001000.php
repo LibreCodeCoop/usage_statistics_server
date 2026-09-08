@@ -9,8 +9,10 @@ use Doctrine\DBAL\Types\Types;
 use OCP\DB\ISchemaWrapper;
 use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
+use Override;
 
 final class Version010000Date20260908001000 extends SimpleMigrationStep {
+    #[Override]
     public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ISchemaWrapper {
         /** @var ISchemaWrapper $schema */
         $schema = $schemaClosure();
