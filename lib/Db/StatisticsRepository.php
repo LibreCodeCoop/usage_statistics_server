@@ -14,7 +14,7 @@ final readonly class StatisticsRepository {
 
     public function countActiveInstallations(string $application, \DateTimeImmutable $since): int {
         $qb = $this->db->getQueryBuilder();
-        $result = $qb->select($qb->func()->count('*'))
+        $result = $qb->select($qb->func()->count())
             ->from('usage_stats_installations')
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
             ->andWhere($qb->expr()->gte('last_seen_at', $qb->createNamedParameter($this->formatDateTime($since))))
@@ -28,7 +28,7 @@ final readonly class StatisticsRepository {
     public function currentDistribution(string $application, string $category, string $key): array {
         $qb = $this->db->getQueryBuilder();
         $result = $qb
-            ->select('m.metric_value', $qb->func()->count('*', 'value_count'))
+            ->select('m.metric_value', $qb->func()->count('', 'value_count'))
             ->from('usage_stats_installations', 'i')
             ->innerJoin('i', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'i.last_report_id'))
             ->where($qb->expr()->eq('i.application', $qb->createNamedParameter($application)))
