@@ -49,7 +49,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
-import { getServerSettings, updateServerSettings } from '../api/settings'
+import { getServerSettings, updateServerSettings } from '../api/settings.ts'
 
 const loading = ref(true)
 const saving = ref(false)

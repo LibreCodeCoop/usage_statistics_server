@@ -28,8 +28,8 @@ final class FeatureContext extends NextcloudApiContext {
         $this->setCurrentUser('');
     }
 
-    #[Given('the output of the last command should contain the following text:')]
-    public static function theOutputOfTheLastCommandContains(PyStringNode $text): void {
+    #[Given('the output of the last command should locally contain the following text:')]
+    public static function theOutputOfTheLastCommandLocallyContains(PyStringNode $text): void {
         $expected = (string) $text;
         if (!str_contains(self::$commandOutput, $expected)) {
             throw new RuntimeException(
