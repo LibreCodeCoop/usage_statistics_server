@@ -33,6 +33,11 @@ final class SchemaController extends OCSController {
      * @param list<array{category:string,key:string,type:string,kind:string,aggregation:string,description:string,required:bool}> $metrics Metric definitions
      *
      * @return DataResponse<Http::STATUS_OK|Http::STATUS_CREATED, array{application:string,schemaVersion:int,status:string}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST|Http::STATUS_CONFLICT, array{error:string,message:string}, array{}>
+     *
+     * 200: Schema was already registered with the same definition
+     * 201: Schema registered
+     * 400: Invalid schema definition
+     * 409: Schema version already exists with another definition
      */
     #[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/admin/schemas', requirements: ['apiVersion' => '(v1)'])]
     public function create(string $application, int $schemaVersion, array $metrics): DataResponse {
@@ -73,6 +78,9 @@ final class SchemaController extends OCSController {
      * @param int $schemaVersion Schema version
      *
      * @return DataResponse<Http::STATUS_OK, array<string,mixed>, array{}>|DataResponse<Http::STATUS_NOT_FOUND, array{error:string}, array{}>
+     *
+     * 200: Registered schema definition
+     * 404: Schema not found
      */
     #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/admin/schemas/{application}/{schemaVersion}', requirements: ['apiVersion' => '(v1)'])]
     public function get(string $application, int $schemaVersion): DataResponse {
