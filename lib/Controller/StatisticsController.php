@@ -15,6 +15,7 @@ use OCP\IRequest;
 #[OpenAPI(scope: OpenAPI::SCOPE_ADMINISTRATION, tags: ['statistics'])]
 final class StatisticsController extends OCSController {
     private const ACTIVE_WINDOW_DAYS = 45;
+    private const RFC3339_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/D';
 
     public function __construct(
         string $appName,
@@ -95,8 +96,8 @@ final class StatisticsController extends OCSController {
      * @param string $application Stable application identifier
      * @param string $category Metric category
      * @param string $key Metric key
-     * @param string $from Optional ISO 8601 lower bound
-     * @param string $to Optional ISO 8601 upper bound
+     * @param string $from Optional RFC3339 lower bound
+     * @param string $to Optional RFC3339 upper bound
      *
      * @return DataResponse<Http::STATUS_OK, array{application:string,category:string,key:string,from:string,to:string,periods:list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}>}, array{}>|DataResponse<Http::STATUS_BAD_REQUEST, array{error:string,message:string}, array{}>
      *
@@ -150,10 +151,32 @@ final class StatisticsController extends OCSController {
     }
 
     private function parseDate(string $value): \DateTimeImmutable {
+        if (preg_match(self::RFC3339_PATTERN, $value, $matches) !== 1) {
+            throw new \InvalidArgumentException('Dates must use RFC3339.');
+        }
+
+        $year = (int)$matches[1];
+        $month = (int)$matches[2];
+        $day = (int)$matches[3];
+        $hour = (int)$matches[4];
+        $minute = (int)$matches[5];
+        $second = (int)$matches[6];
+        if (!checkdate($month, $day, $year) || $hour > 23 || $minute > 59 || $second > 59) {
+            throw new \InvalidArgumentException('Dates must use RFC3339.');
+        }
+
+        $timezone = $matches[8];
+        if ($timezone !== 'Z') {
+            [$timezoneHour, $timezoneMinute] = array_map('intval', explode(':', substr($timezone, 1)));
+            if ($timezoneHour > 23 || $timezoneMinute > 59) {
+                throw new \InvalidArgumentException('Dates must use RFC3339.');
+            }
+        }
+
         try {
             return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'));
         } catch (\Exception) {
-            throw new \InvalidArgumentException('Dates must use a valid ISO 8601 value.');
+            throw new \InvalidArgumentException('Dates must use RFC3339.');
         }
     }
 }
