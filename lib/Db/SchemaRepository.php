@@ -30,19 +30,27 @@ final readonly class SchemaRepository {
     }
 
     public function store(string $application, int $schemaVersion, array $definition): void {
-        $this->db->setValues(
-            'usage_stats_schemas',
-            [
-                'application' => $application,
-                'schema_version' => $schemaVersion,
-            ],
-            [
-                'definition' => json_encode($definition, JSON_THROW_ON_ERROR),
-            ],
-            [
-                'definition' => json_encode($definition, JSON_THROW_ON_ERROR),
-                'created_at' => new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
-            ],
-        );
+        $encoded = json_encode($definition, JSON_THROW_ON_ERROR);
+
+        if ($this->find($application, $schemaVersion) !== null) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->update('usage_stats_schemas')
+                ->set('definition', $qb->createNamedParameter($encoded))
+                ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
+                ->andWhere($qb->expr()->eq('schema_version', $qb->createNamedParameter($schemaVersion, IQueryBuilder::PARAM_INT)))
+                ->executeStatement();
+            return;
+        }
+
+        $qb = $this->db->getQueryBuilder();
+        $qb->insert('usage_stats_schemas')->values([
+            'application' => $qb->createNamedParameter($application),
+            'schema_version' => $qb->createNamedParameter($schemaVersion, IQueryBuilder::PARAM_INT),
+            'definition' => $qb->createNamedParameter($encoded),
+            'created_at' => $qb->createNamedParameter(
+                new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+                IQueryBuilder::PARAM_DATETIME_IMMUTABLE,
+            ),
+        ])->executeStatement();
     }
 }
