@@ -57,6 +57,18 @@ final class OutOfOrderReportTest extends TestCase {
             'total' => 20.0,
         ], $statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
 
+        $installationQb = $this->db->getQueryBuilder();
+        $installation = $installationQb->select('last_period_start', 'last_period_end')
+            ->from('usage_stats_installations')
+            ->where($installationQb->expr()->eq('application', $installationQb->createNamedParameter('libresign')))
+            ->andWhere($installationQb->expr()->eq('installation_id', $installationQb->createNamedParameter('installation-delayed')))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        self::assertIsArray($installation);
+        self::assertSame('2026-08-01 00:00:00', (string)$installation['last_period_start']);
+        self::assertSame('2026-09-01 00:00:00', (string)$installation['last_period_end']);
+
         $history = $statistics->numericalHistory(
             'libresign',
             'usage',
