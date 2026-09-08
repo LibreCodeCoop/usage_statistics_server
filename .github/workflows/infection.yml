@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       php-min: ${{ steps.versions.outputs.php-min }}
-      php-max: ${{ steps.versions.outputs.php-max }}
       branches-max: ${{ steps.versions.outputs.branches-max }}
 
     steps:
@@ -118,10 +117,6 @@ jobs:
             --colors=always \
             --fail-on-warning \
             --fail-on-risky
-          php -r '$xml = new DOMDocument(); if (!$xml->load("build/coverage/coverage-xml/index.xml")) { exit(1); }'
-          php -r 'require "vendor-bin/infection/vendor/autoload.php"; Infection\TestFramework\XML\SafeDOMXPath::fromFile("build/coverage/coverage-xml/index.xml");'
-          php -r 'require "vendor-bin/infection/vendor/autoload.php"; require "vendor/autoload.php"; Infection\TestFramework\XML\SafeDOMXPath::fromFile("build/coverage/coverage-xml/index.xml");'
-          php -r 'require "vendor-bin/infection/vendor/autoload.php"; require "tests/php/bootstrap.php"; Infection\TestFramework\XML\SafeDOMXPath::fromFile("build/coverage/coverage-xml/index.xml");'
 
       - name: Run Infection
         working-directory: apps/${{ env.APP_NAME }}
@@ -143,8 +138,6 @@ jobs:
           name: infection-results
           path: |
             apps/${{ env.APP_NAME }}/infection.log
-            apps/${{ env.APP_NAME }}/build/coverage/junit.xml
-            apps/${{ env.APP_NAME }}/build/coverage/coverage-xml/index.xml
             apps/${{ env.APP_NAME }}/vendor-bin/infection/composer.lock
           if-no-files-found: ignore
           retention-days: 14
