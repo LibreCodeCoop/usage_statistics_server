@@ -18,6 +18,16 @@ POST /api/v1/reports
 
 The server SHOULD support idempotent resubmission of the same logical report.
 
+A successful submission, including an idempotent retry, returns the same application-level response:
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+The protocol does not expose internal database identifiers and does not require the server to tell the client whether a successful submission created a row or matched an existing report.
+
 ## Report
 
 Example:
@@ -81,6 +91,8 @@ The server stores this value so historical reports remain interpretable after an
 
 The `usage_statistics_server` implementation requires the `(application, schemaVersion)` definition to be registered by an administrator before reports using it are accepted. Registered schema versions are immutable.
 
+A schema version is report content, not part of report identity. Applications SHOULD activate a new schema at a reporting-period boundary. A second submission for the same installation and period using another schema version is a conflict, not another report.
+
 ### `period`
 
 The reporting interval represented by period metrics.
@@ -129,21 +141,26 @@ The `usage_statistics_server` application schema also declares the allowed aggre
 The logical identity of a report is:
 
 ```text
-(application, installationId, period.start, period.end, schemaVersion)
+(application, installationId, period.start, period.end)
 ```
 
 A server MUST prevent accidental duplicate storage for the same logical report.
 
+`schemaVersion` is intentionally excluded from this identity. Otherwise a schema transition during one period could create two reports and double-count that installation.
+
 Protocol v1 does not require a preliminary handshake or server-issued report token.
 
-A repeated submission MAY:
+The `usage_statistics_server` implementation keeps the first accepted report immutable:
 
-- replace the existing report for that logical identity; or
-- be rejected as already received;
+- a retry using the same schema version is accepted idempotently;
+- a retry for the same logical period using another schema version is rejected as a conflict;
+- neither case creates a second logical report.
 
-but it MUST NOT create a second logical report that would double-count statistics.
+## Storage guidance
 
-The `usage_statistics_server` implementation keeps the first accepted report immutable and returns `already_received` for an identical logical report submitted again.
+Servers SHOULD persist normalized validated fields rather than the arbitrary request body.
+
+The `usage_statistics_server` implementation does not retain the raw JSON payload. Metric values are stored in typed columns according to their declared type, with exactly one value column populated for each metric.
 
 ## Validation
 
