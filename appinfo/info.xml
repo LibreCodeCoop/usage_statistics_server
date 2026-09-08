@@ -26,4 +26,12 @@ A generic Nextcloud app for receiving, storing, aggregating, and exposing privac
     <background-jobs>
         <job>OCA\UsageStatisticsServer\BackgroundJob\CleanupOldData</job>
     </background-jobs>
+    <commands>
+        <command>OCA\UsageStatisticsServer\Command\RetentionGet</command>
+        <command>OCA\UsageStatisticsServer\Command\RetentionSet</command>
+    </commands>
+    <settings>
+        <admin>OCA\UsageStatisticsServer\Settings\AdminSettings</admin>
+        <admin-section>OCA\UsageStatisticsServer\Settings\AdminSection</admin-section>
+    </settings>
 </info>

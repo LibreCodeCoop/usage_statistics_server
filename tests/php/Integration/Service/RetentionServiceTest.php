@@ -70,24 +70,44 @@ final class RetentionServiceTest extends TestCase {
         self::assertSame(1, $this->countRows('usage_stats_metrics'));
     }
 
-    public function testCleanupCountsReportsAcrossMultipleBatches(): void {
+    public function testCleanupCountsReportsAndMetricsAcrossMultipleBatches(): void {
         for ($i = 0; $i < 501; ++$i) {
+            $installationId = 'old-' . $i;
             $qb = $this->db->getQueryBuilder();
             $qb->insert('usage_stats_reports')->values([
                 'protocol_version' => $qb->createNamedParameter(1, IQueryBuilder::PARAM_INT),
                 'application' => $qb->createNamedParameter('libresign'),
-                'installation_id' => $qb->createNamedParameter('old-' . $i),
+                'installation_id' => $qb->createNamedParameter($installationId),
                 'schema_version' => $qb->createNamedParameter(1, IQueryBuilder::PARAM_INT),
                 'period_start' => $qb->createNamedParameter('2025-01-01 00:00:00'),
                 'period_end' => $qb->createNamedParameter('2025-02-01 00:00:00'),
                 'received_at' => $qb->createNamedParameter('2025-02-02 00:00:00'),
+            ])->executeStatement();
+
+            $reportQb = $this->db->getQueryBuilder();
+            $reportId = $reportQb->select('id')
+                ->from('usage_stats_reports')
+                ->where($reportQb->expr()->eq('installation_id', $reportQb->createNamedParameter($installationId)))
+                ->executeQuery()
+                ->fetchOne();
+            self::assertIsNumeric($reportId);
+
+            $metricQb = $this->db->getQueryBuilder();
+            $metricQb->insert('usage_stats_metrics')->values([
+                'report_id' => $metricQb->createNamedParameter((int)$reportId, IQueryBuilder::PARAM_INT),
+                'category' => $metricQb->createNamedParameter('usage'),
+                'metric_key' => $metricQb->createNamedParameter('requests_completed'),
+                'metric_type' => $metricQb->createNamedParameter('integer'),
+                'value_integer' => $metricQb->createNamedParameter(1, IQueryBuilder::PARAM_INT),
             ])->executeStatement();
         }
 
         $deleted = $this->retention->cleanupBefore(new \DateTimeImmutable('2026-01-01T00:00:00Z'));
 
         self::assertSame(501, $deleted['reports']);
+        self::assertSame(501, $deleted['metrics']);
         self::assertSame(0, $this->countRows('usage_stats_reports'));
+        self::assertSame(0, $this->countRows('usage_stats_metrics'));
     }
 
     private function store(string $installationId, string $start, string $end): int {
