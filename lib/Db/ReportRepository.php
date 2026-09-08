@@ -35,6 +35,29 @@ final readonly class ReportRepository {
             return ['id' => $existing['id'], 'created' => false];
         }
 
+        try {
+            return $this->insertReport($report);
+        } catch (Exception $e) {
+            if (!in_array($e->getReason(), [Exception::REASON_CONSTRAINT_VIOLATION, Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION], true)) {
+                throw $e;
+            }
+
+            $existing = $this->findByLogicalIdentity($report);
+            if ($existing !== null) {
+                $this->assertSameSchema($report, $existing['schemaVersion']);
+                return ['id' => $existing['id'], 'created' => false];
+            }
+
+            if ($allowRetry) {
+                return $this->storeWithRetry($report, false);
+            }
+
+            throw $e;
+        }
+    }
+
+    /** @return array{id:int,created:true} */
+    private function insertReport(Report $report): array {
         $receivedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
         $this->db->beginTransaction();
@@ -59,24 +82,10 @@ final readonly class ReportRepository {
 
             $this->db->commit();
             return ['id' => $reportId, 'created' => true];
-        } catch (\Throwable $e) {
+        } finally {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-
-            if ($e instanceof Exception && in_array($e->getReason(), [Exception::REASON_CONSTRAINT_VIOLATION, Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION], true)) {
-                $existing = $this->findByLogicalIdentity($report);
-                if ($existing !== null) {
-                    $this->assertSameSchema($report, $existing['schemaVersion']);
-                    return ['id' => $existing['id'], 'created' => false];
-                }
-
-                if ($allowRetry) {
-                    return $this->storeWithRetry($report, false);
-                }
-            }
-
-            throw $e;
         }
     }
 
