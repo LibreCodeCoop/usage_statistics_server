@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <!--
-SPDX-FileCopyrightText: 2026 Vitor Mattos
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -15,7 +15,7 @@ A generic Nextcloud app for receiving, storing, aggregating, and exposing privac
     ]]></description>
     <version>0.1.0</version>
     <licence>agpl</licence>
-    <author mail="vitor@php.rio">Vitor Mattos</author>
+    <author mail="contact@librecode.coop" homepage="https://librecode.coop">LibreCode</author>
     <namespace>UsageStatisticsServer</namespace>
     <category>tools</category>
     <bugs>https://github.com/vitormattos/usage-statistics-server/issues</bugs>
