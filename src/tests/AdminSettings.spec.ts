@@ -5,10 +5,10 @@
 
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getServerSettings, updateServerSettings } from '../api/settings.ts'
 import AdminSettings from '../views/AdminSettings.vue'
+import { getServerSettings, updateServerSettings } from '../api/settings'
 
-vi.mock('../api/settings.ts', () => ({
+vi.mock('../api/settings', () => ({
 	getServerSettings: vi.fn(),
 	updateServerSettings: vi.fn(),
 }))

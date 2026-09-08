@@ -7,6 +7,7 @@
 
 declare(strict_types=1);
 
+use Behat\Gherkin\Node\PyStringNode;
 use Behat\Hook\BeforeSuite;
 use Behat\Step\Given;
 use Behat\Testwork\Hook\Scope\BeforeSuiteScope;
@@ -25,5 +26,15 @@ final class FeatureContext extends NextcloudApiContext {
     #[Given('as anonymous user')]
     public function asAnonymousUser(): void {
         $this->setCurrentUser('');
+    }
+
+    #[Given('the output of the last command should contain the following text:')]
+    public static function theOutputOfTheLastCommandContains(PyStringNode $text): void {
+        $expected = (string) $text;
+        if (!str_contains(self::$commandOutput, $expected)) {
+            throw new RuntimeException(
+                'The output of the last command does not contain: ' . $expected . "\nActual output:\n" . self::$commandOutput,
+            );
+        }
     }
 }

@@ -44,12 +44,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <script setup lang="ts">
 import { translate as t } from '@nextcloud/l10n'
+import { computed, onMounted, ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
-import { computed, onMounted, ref } from 'vue'
-import { getServerSettings, updateServerSettings } from '../api/settings.ts'
+import { getServerSettings, updateServerSettings } from '../api/settings'
 
 const loading = ref(true)
 const saving = ref(false)

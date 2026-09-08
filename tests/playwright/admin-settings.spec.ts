@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '@playwright/test'
 
 /**
  * Sign in as the test administrator.
@@ -14,7 +16,7 @@ async function login(page: Page): Promise<void> {
 	await page.goto('/index.php/login')
 	await page.locator('#user').fill('admin')
 	await page.locator('#password').fill('admin')
-	await page.locator('#submit-form').click()
+	await page.locator('button[type="submit"]').click()
 	await page.waitForURL(/\/index\.php\/apps\/|\/index\.php\/settings\/user/)
 }
 
