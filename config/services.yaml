@@ -7,3 +7,8 @@ services:
     resource: '../src/'
     exclude:
       - '../src/Kernel.php'
+
+  Doctrine\DBAL\Connection:
+    factory: ['Doctrine\DBAL\DriverManager', 'getConnection']
+    arguments:
+      - { url: '%env(resolve:DATABASE_URL)%' }
