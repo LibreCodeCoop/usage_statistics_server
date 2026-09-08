@@ -160,7 +160,10 @@ final readonly class StatisticsRepository {
 
     /** @param array<string,mixed> $row */
     private function readTypedValue(array $row): mixed {
-        return match ($row['metric_type']) {
+        /** @var 'integer'|'number'|'boolean'|'string' $type */
+        $type = $row['metric_type'];
+
+        return match ($type) {
             'integer' => (int)$row['value_integer'],
             'number' => (float)$row['value_number'],
             'boolean' => $this->readBoolean($row['value_boolean']),
