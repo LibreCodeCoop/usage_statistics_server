@@ -1,36 +1,50 @@
 {
     "name": "vitormattos/usage-statistics-server",
-    "description": "Nextcloud app for receiving and aggregating privacy-preserving usage statistics.",
+    "description": "Generic server for privacy-preserving usage statistics.",
     "type": "project",
     "license": "AGPL-3.0-or-later",
     "require": {
-        "php": ">=8.3"
+        "php": ">=8.4",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "ext-pdo": "*",
+        "doctrine/dbal": "^4.2",
+        "doctrine/doctrine-bundle": "^3.0",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "symfony/console": "8.1.*",
+        "symfony/dotenv": "8.1.*",
+        "symfony/framework-bundle": "8.1.*",
+        "symfony/runtime": "8.1.*",
+        "symfony/yaml": "8.1.*"
     },
     "require-dev": {
-        "nextcloud/ocp": "dev-master",
         "phpunit/phpunit": "^11.5",
-        "roave/security-advisories": "dev-latest"
+        "symfony/browser-kit": "8.1.*",
+        "symfony/css-selector": "8.1.*"
     },
     "autoload": {
         "psr-4": {
-            "OCA\\UsageStatisticsServer\\": "lib/"
+            "App\\": "src/",
+            "DoctrineMigrations\\": "migrations/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "OCP\\": "vendor/nextcloud/ocp/OCP",
-            "OCA\\UsageStatisticsServer\\Tests\\": "tests/php/"
+            "App\\Tests\\": "tests/"
         }
     },
     "scripts": {
-        "lint": "find lib tests -name '*.php' -print0 | xargs -0 -n1 php -l",
-        "test:unit": "phpunit -c tests/php/phpunit.xml --no-coverage --colors=always --fail-on-warning --fail-on-risky"
+        "test": "phpunit"
     },
     "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true,
-        "platform": {
-            "php": "8.3"
+        "allow-plugins": {
+            "symfony/runtime": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "symfony": {
+            "require": "8.1.*"
         }
     }
 }

@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\UsageStatisticsServer\Service;
+
+final readonly class Metric {
+    public function __construct(
+        public string $category,
+        public string $key,
+        public string $type,
+        public string|int|float|bool $value,
+    ) {
+    }
+}
