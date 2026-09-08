@@ -75,13 +75,13 @@ final class OutOfOrderReportTest extends TestCase {
         $statistics = new StatisticsRepository($this->db);
 
         $reports->store($factory->fromPayload($this->payload(
-            '2026-07-01T00:00:00Z',
+            '2026-08-01T00:00:00Z',
             '2026-09-01T00:00:00Z',
             '1.0.0',
             10,
         )));
         $reports->store($factory->fromPayload($this->payload(
-            '2026-08-01T00:00:00Z',
+            '2026-08-15T00:00:00Z',
             '2026-09-01T00:00:00Z',
             '2.0.0',
             20,
@@ -90,7 +90,7 @@ final class OutOfOrderReportTest extends TestCase {
         self::assertSame([
             ['value' => '2.0.0', 'count' => 1],
         ], $statistics->currentDistribution('libresign', 'server', 'version'));
-        $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
+        $this->assertCurrentPeriod('2026-08-15 00:00:00', '2026-09-01 00:00:00');
     }
 
     public function testEarlierStartCannotReplaceCurrentReportWithSamePeriodEnd(): void {
@@ -99,13 +99,13 @@ final class OutOfOrderReportTest extends TestCase {
         $statistics = new StatisticsRepository($this->db);
 
         $reports->store($factory->fromPayload($this->payload(
-            '2026-08-01T00:00:00Z',
+            '2026-08-15T00:00:00Z',
             '2026-09-01T00:00:00Z',
             '2.0.0',
             20,
         )));
         $reports->store($factory->fromPayload($this->payload(
-            '2026-07-01T00:00:00Z',
+            '2026-08-01T00:00:00Z',
             '2026-09-01T00:00:00Z',
             '1.0.0',
             10,
@@ -114,7 +114,7 @@ final class OutOfOrderReportTest extends TestCase {
         self::assertSame([
             ['value' => '2.0.0', 'count' => 1],
         ], $statistics->currentDistribution('libresign', 'server', 'version'));
-        $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
+        $this->assertCurrentPeriod('2026-08-15 00:00:00', '2026-09-01 00:00:00');
     }
 
     private function assertCurrentPeriod(string $start, string $end): void {
