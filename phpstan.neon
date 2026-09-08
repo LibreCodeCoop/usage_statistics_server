@@ -1,0 +1,8 @@
+parameters:
+    level: 8
+    paths:
+        - lib
+    phpVersion:
+        min: 80300
+        max: 80599
+    tmpDir: build/phpstan

@@ -1,0 +1,25 @@
+{
+  "name": "usage-statistics-server",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "lint": "eslint .",
+    "ts:check": "tsc --noEmit",
+    "typescript:generate": "openapi-typescript -t"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
+  "devDependencies": {
+    "@nextcloud/eslint-config": "^9.0.1",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "^24.0.0",
+    "npm": "^11.3.0"
+  }
+}

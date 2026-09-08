@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="5"
+    findUnusedCode="false"
+    hideExternalErrors="true"
+    resolveFromConfigFile="true"
+    phpVersion="8.3"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor-bin/psalm/vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="lib" />
+        <ignoreFiles>
+            <directory name="vendor" />
+            <directory name="vendor-bin" />
+        </ignoreFiles>
+    </projectFiles>
+    <issueHandlers>
+        <LessSpecificReturnStatement errorLevel="error"/>
+        <LessSpecificReturnType errorLevel="error"/>
+        <LessSpecificImplementedReturnType errorLevel="error"/>
+        <MoreSpecificReturnType errorLevel="error"/>
+        <UndefinedClass>
+            <errorLevel type="suppress">
+                <referencedClass name="Doctrine\DBAL\Types\Types" />
+            </errorLevel>
+        </UndefinedClass>
+    </issueHandlers>
+</psalm>
