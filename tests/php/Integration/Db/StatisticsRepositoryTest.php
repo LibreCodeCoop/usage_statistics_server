@@ -70,7 +70,7 @@ final class StatisticsRepositoryTest extends TestCase {
             'min' => 20.0,
             'max' => 40.0,
             'total' => 60.0,
-        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed', 'integer'));
 
         self::assertSame([
             'count' => 2,
@@ -78,12 +78,13 @@ final class StatisticsRepositoryTest extends TestCase {
             'min' => 1.5,
             'max' => 1.5,
             'total' => 3.0,
-        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'average_size'));
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'average_size', 'number'));
 
         $history = $this->statistics->numericalHistory(
             'libresign',
             'usage',
             'requests_completed',
+            'integer',
             new \DateTimeImmutable('2026-06-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
         );
@@ -136,7 +137,7 @@ final class StatisticsRepositoryTest extends TestCase {
             'min' => 10.0,
             'max' => 11.0,
             'total' => 32.0,
-        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed', 'integer'));
 
         self::assertSame([[
             'periodStart' => '2026-07-01 00:00:00',
@@ -150,6 +151,7 @@ final class StatisticsRepositoryTest extends TestCase {
             'libresign',
             'usage',
             'requests_completed',
+            'integer',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         ));
@@ -162,7 +164,12 @@ final class StatisticsRepositoryTest extends TestCase {
             'min' => null,
             'max' => null,
             'total' => null,
-        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'missing'));
+        ], $this->statistics->currentNumericalEvaluation('libresign', 'usage', 'missing', 'integer'));
+    }
+
+    public function testRejectsNonNumericalMetricType(): void {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->statistics->currentNumericalEvaluation('libresign', 'server', 'version', 'string');
     }
 
     public function testMetricValuesAreStoredInTheirTypedColumn(): void {
