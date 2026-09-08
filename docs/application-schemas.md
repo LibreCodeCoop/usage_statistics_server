@@ -63,6 +63,10 @@ A stored schema can be inspected with:
 GET /ocs/v2.php/apps/usage_statistics_server/api/v1/admin/schemas/{application}/{schemaVersion}
 ```
 
+Registration is idempotent when the same definition is submitted again.
+
+A schema version is immutable after it is registered. Reusing the same `(application, schemaVersion)` with a different definition returns a conflict. Applications must increment `schemaVersion` when the contract changes.
+
 ## Ingestion behavior
 
 A report is accepted only when its `(application, schemaVersion)` is registered.
@@ -78,6 +82,8 @@ This makes the schema an explicit allowlist rather than allowing arbitrary metri
 
 ## Evolution
 
-Schemas are immutable from the client's point of view. If the meaning, type, or required set of metrics changes incompatibly, the application should publish a new `schemaVersion`.
+Schemas are immutable so historical reports keep the interpretation they had when received.
 
-The server currently allows an administrator to replace a stored definition for operational correction. This should be used carefully once reports for that version exist, because historical reports are interpreted using the registered definition.
+If a metric meaning or type changes incompatibly, prefer both a new `schemaVersion` and a new metric key. This keeps historical aggregates unambiguous when a query spans multiple schema versions.
+
+Adding an optional metric or changing presentation metadata still requires a new `schemaVersion`; the client and server contract should never depend on silently changing a registered definition.
