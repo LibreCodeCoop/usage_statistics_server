@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Historical data retention
 
 The server preserves report history so usage trends can be recomputed and compared over time. Historical data is not retained indefinitely by default.
