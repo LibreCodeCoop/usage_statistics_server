@@ -120,6 +120,7 @@ jobs:
             --fail-on-risky
           php -r '$xml = new DOMDocument(); if (!$xml->load("build/coverage/coverage-xml/index.xml")) { exit(1); }'
           php -r 'require "vendor-bin/infection/vendor/autoload.php"; Infection\TestFramework\XML\SafeDOMXPath::fromFile("build/coverage/coverage-xml/index.xml");'
+          php -r 'require "vendor-bin/infection/vendor/autoload.php"; require "vendor/autoload.php"; Infection\TestFramework\XML\SafeDOMXPath::fromFile("build/coverage/coverage-xml/index.xml");'
 
       - name: Run Infection
         working-directory: apps/${{ env.APP_NAME }}
