@@ -26,6 +26,19 @@ final class ReportFactoryTest extends TestCase {
         self::assertSame(72, $report->metrics[0]->value);
     }
 
+    public function testAcceptsRfc3339BoundaryValues(): void {
+        $payload = $this->validPayload();
+        $payload['period'] = [
+            'start' => '2026-08-01T23:59:59.123456+23:59',
+            'end' => '2026-08-02T23:59:59.123456+23:59',
+        ];
+
+        $report = (new ReportFactory())->fromPayload($payload);
+
+        self::assertSame('2026-08-01T00:00:59+00:00', $report->periodStart->format(DATE_ATOM));
+        self::assertSame('2026-08-02T00:00:59+00:00', $report->periodEnd->format(DATE_ATOM));
+    }
+
     public function testRejectsDuplicateMetric(): void {
         $payload = $this->validPayload();
         $payload['metrics'][] = $payload['metrics'][0];
@@ -62,11 +75,32 @@ final class ReportFactoryTest extends TestCase {
         yield 'space separator' => ['2026-08-01 00:00:00Z'];
         yield 'missing timezone' => ['2026-08-01T00:00:00'];
         yield 'invalid calendar date' => ['2026-02-30T00:00:00Z'];
+        yield 'invalid month zero' => ['2026-00-01T00:00:00Z'];
+        yield 'invalid month thirteen' => ['2026-13-01T00:00:00Z'];
+        yield 'invalid day zero' => ['2026-01-00T00:00:00Z'];
         yield 'invalid hour' => ['2026-08-01T24:00:00Z'];
         yield 'invalid minute' => ['2026-08-01T23:60:00Z'];
         yield 'invalid second' => ['2026-08-01T23:59:60Z'];
         yield 'invalid timezone hour' => ['2026-08-01T00:00:00+24:00'];
         yield 'invalid timezone minute' => ['2026-08-01T00:00:00+23:60'];
+        yield 'too much precision' => ['2026-08-01T00:00:00.1234567Z'];
+    }
+
+    #[DataProvider('invalidPeriodContainerProvider')]
+    public function testRejectsInvalidPeriodContainer(mixed $period): void {
+        $payload = $this->validPayload();
+        $payload['period'] = $period;
+
+        $this->expectException(InvalidReport::class);
+        (new ReportFactory())->fromPayload($payload);
+    }
+
+    /** @return iterable<string,array{mixed}> */
+    public static function invalidPeriodContainerProvider(): iterable {
+        yield 'null' => [null];
+        yield 'string' => ['period'];
+        yield 'integer' => [1];
+        yield 'list' => [['2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z']];
     }
 
     #[DataProvider('invalidPeriodProvider')]
@@ -109,9 +143,12 @@ final class ReportFactoryTest extends TestCase {
         yield 'protocol version' => ['protocolVersion', 2];
         yield 'schema version zero' => ['schemaVersion', 0];
         yield 'schema version string' => ['schemaVersion', '1'];
+        yield 'application null' => ['application', null];
+        yield 'application integer' => ['application', 1];
         yield 'application empty' => ['application', ''];
         yield 'application invalid chars' => ['application', 'libre sign'];
         yield 'application too long' => ['application', str_repeat('a', 129)];
+        yield 'installation id null' => ['installationId', null];
         yield 'installation id too long' => ['installationId', str_repeat('a', 129)];
     }
 
@@ -153,7 +190,7 @@ final class ReportFactoryTest extends TestCase {
     }
 
     #[DataProvider('invalidMetricProvider')]
-    public function testRejectsInvalidMetric(array $metric): void {
+    public function testRejectsInvalidMetric(mixed $metric): void {
         $payload = $this->validPayload();
         $payload['metrics'] = [$metric];
 
@@ -161,8 +198,10 @@ final class ReportFactoryTest extends TestCase {
         (new ReportFactory())->fromPayload($payload);
     }
 
-    /** @return iterable<string,array{array<string,mixed>}> */
+    /** @return iterable<string,array{mixed}> */
     public static function invalidMetricProvider(): iterable {
+        yield 'scalar metric' => ['metric'];
+        yield 'list metric' => [['usage', 'x', 'integer', 1]];
         yield 'unknown type' => [[
             'category' => 'usage', 'key' => 'x', 'type' => 'unknown', 'value' => 1,
         ]];
