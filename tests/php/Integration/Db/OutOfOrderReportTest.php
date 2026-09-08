@@ -55,7 +55,7 @@ final class OutOfOrderReportTest extends TestCase {
             'min' => 20.0,
             'max' => 20.0,
             'total' => 20.0,
-        ], $statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
+        ], $statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed', 'integer'));
 
         $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
 
@@ -63,6 +63,7 @@ final class OutOfOrderReportTest extends TestCase {
             'libresign',
             'usage',
             'requests_completed',
+            'integer',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-09-02T00:00:00Z'),
         );
