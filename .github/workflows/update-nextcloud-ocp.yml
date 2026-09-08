@@ -1,0 +1,65 @@
+# This workflow is based on the Nextcloud organization template repository
+#
+# https://github.com/nextcloud/.github
+#
+# SPDX-FileCopyrightText: 2022-2024 Nextcloud GmbH and Nextcloud contributors
+# SPDX-License-Identifier: MIT
+
+name: Update nextcloud/ocp
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '5 2 * * 0'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-nextcloud-ocp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get version matrix
+        id: versions
+        uses: nextcloud-libraries/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
+
+      - name: Set up PHP ${{ steps.versions.outputs.php-min }}
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ steps.versions.outputs.php-min }}
+          extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, xmlreader, xmlwriter, zip, zlib, sqlite, pdo_sqlite
+          coverage: none
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+
+      - name: Update nextcloud/ocp
+        env:
+          OCP_BRANCH: ${{ steps.versions.outputs.branches-min }}
+        run: composer require --dev nextcloud/ocp:dev-$OCP_BRANCH --with-dependencies
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(dev-deps): bump nextcloud/ocp package'
+          committer: GitHub <noreply@github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          signoff: true
+          branch: automated/noid/update-nextcloud-ocp
+          delete-branch: true
+          title: 'chore(dev-deps): bump nextcloud/ocp package'
+          add-paths: |
+            composer.json
+            composer.lock
+          body: |
+            Auto-generated update of the `nextcloud/ocp` development dependency for the minimum supported Nextcloud branch.

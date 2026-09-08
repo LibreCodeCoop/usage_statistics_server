@@ -1,0 +1,158 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Behat SQLite
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: behat-sqlite-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      php-min: ${{ steps.versions.outputs.php-min }}
+      php-max: ${{ steps.versions.outputs.php-max }}
+      branches-min: ${{ steps.versions.outputs.branches-min }}
+      branches-max: ${{ steps.versions.outputs.branches-max }}
+
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get version matrix
+        id: versions
+        uses: nextcloud-libraries/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
+
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      src: ${{ steps.changes.outputs.src }}
+
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        continue-on-error: true
+        with:
+          filters: |
+            src:
+              - '.github/workflows/behat*'
+              - 'appinfo/**'
+              - 'lib/**'
+              - 'tests/integration/**'
+              - 'composer.json'
+              - 'composer.lock'
+
+  behat-sqlite:
+    runs-on: ubuntu-latest
+    needs: [changes, matrix]
+    if: needs.changes.outputs.src != 'false'
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php-version: ${{ needs.matrix.outputs.php-min }}
+            server-version: ${{ needs.matrix.outputs.branches-min }}
+            boundary: minimum
+          - php-version: ${{ needs.matrix.outputs.php-max }}
+            server-version: ${{ needs.matrix.outputs.branches-max }}
+            boundary: maximum
+
+    env:
+      APP_NAME: usage_statistics_server
+
+    name: SQLite ${{ matrix.boundary }} PHP ${{ matrix.php-version }} Nextcloud ${{ matrix.server-version }}
+
+    steps:
+      - name: Checkout server
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+          repository: nextcloud/server
+          ref: ${{ matrix.server-version }}
+
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: apps/${{ env.APP_NAME }}
+
+      - name: Set up PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, sockets, sqlite, pdo_sqlite, xmlreader, xmlwriter, zip, zlib
+          coverage: none
+          ini-file: development
+          ini-values: disable_functions=
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: apps/${{ env.APP_NAME }}
+        run: |
+          composer remove nextcloud/ocp --dev --no-scripts
+          composer install --no-dev --no-scripts
+          composer --working-dir=tests/integration install --prefer-dist --no-progress
+
+      - name: Set up Nextcloud
+        run: |
+          mkdir data
+          ./occ maintenance:install \
+            --verbose \
+            --database=sqlite \
+            --database-name=nextcloud \
+            --admin-user admin \
+            --admin-pass admin
+          ./occ --version
+          ./occ app:enable --force ${{ env.APP_NAME }}
+          ./occ config:system:set auth.bruteforce.protection.enabled --value false --type boolean
+          ./occ config:system:set ratelimit.protection.enabled --value false --type boolean
+          ./occ config:system:set debug --value true --type boolean
+
+      - name: Run Behat
+        working-directory: apps/${{ env.APP_NAME }}/tests/integration
+        env:
+          BEHAT_ROOT_DIR: ../../../../
+          BEHAT_RUN_AS: runner
+          BEHAT_VERBOSE: ${{ runner.debug }}
+        run: composer run behat
+
+      - name: Upload Behat results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: behat-results-${{ matrix.boundary }}-nc${{ matrix.server-version }}-php${{ matrix.php-version }}
+          path: apps/${{ env.APP_NAME }}/tests/integration/output/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Print logs
+        if: always()
+        run: cat data/nextcloud.log 2>/dev/null || true
+
+  summary:
+    permissions:
+      contents: none
+    runs-on: ubuntu-latest
+    needs: [changes, behat-sqlite]
+    if: always()
+    name: behat-sqlite-summary
+
+    steps:
+      - name: Summary status
+        run: if ${{ needs.changes.outputs.src != 'false' && needs.behat-sqlite.result != 'success' }}; then exit 1; fi
