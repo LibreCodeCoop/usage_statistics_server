@@ -42,7 +42,6 @@ final readonly class StatisticsRepository {
             ->andWhere($qb->expr()->eq('m.category', $qb->createNamedParameter($category)))
             ->andWhere($qb->expr()->eq('m.metric_key', $qb->createNamedParameter($key)))
             ->groupBy('m.metric_type', 'm.value_integer', 'm.value_number', 'm.value_boolean', 'm.value_string')
-            ->orderBy('value_count', 'DESC')
             ->executeQuery();
 
         $distribution = [];
@@ -85,14 +84,14 @@ final readonly class StatisticsRepository {
 
         foreach ([['integer', 'value_integer'], ['number', 'value_number']] as [$type, $column]) {
             foreach ($this->numericalHistoryForType($application, $category, $key, $from, $to, $type, $column) as $row) {
-                $identity = $row['periodStart'] . '|' . $row['periodEnd'];
+                $identity = $row['periodStart'] . "\0" . $row['periodEnd'];
                 $history[$identity] = isset($history[$identity])
                     ? $this->mergeHistoricalRows($history[$identity], $row)
                     : $row;
             }
         }
 
-        $rows = array_values($history);
+        $rows = $history;
         usort($rows, static fn (array $left, array $right): int => $left['periodEnd'] <=> $right['periodEnd']);
 
         return $rows;
@@ -109,10 +108,10 @@ final readonly class StatisticsRepository {
         $qb = $this->db->getQueryBuilder();
         $row = $qb
             ->select(
-                $qb->func()->count('m.' . $column),
-                $qb->func()->sum('m.' . $column),
-                $qb->func()->min('m.' . $column),
-                $qb->func()->max('m.' . $column),
+                $qb->func()->count($column),
+                $qb->func()->sum($column),
+                $qb->func()->min($column),
+                $qb->func()->max($column),
             )
             ->from('usage_stats_installations', 'i')
             ->innerJoin('i', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'i.last_report_id'))
@@ -123,19 +122,19 @@ final readonly class StatisticsRepository {
             ->executeQuery()
             ->fetchNumeric();
 
-        if ($row === false) {
+        if ($row === false || (int)$row[0] === 0) {
             return ['count' => 0, 'total' => null, 'min' => null, 'max' => null];
         }
 
         return [
             'count' => (int)$row[0],
-            'total' => $row[1] === null ? null : (float)$row[1],
-            'min' => $row[2] === null ? null : (float)$row[2],
-            'max' => $row[3] === null ? null : (float)$row[3],
+            'total' => (float)$row[1],
+            'min' => (float)$row[2],
+            'max' => (float)$row[3],
         ];
     }
 
-    /** @return list<array{periodStart:string,periodEnd:string,count:int,average:float|null,min:float|null,max:float|null,total:float|null}> */
+    /** @return list<array{periodStart:string,periodEnd:string,count:int,average:float,min:float,max:float,total:float}> */
     private function numericalHistoryForType(
         string $application,
         string $category,
@@ -150,10 +149,10 @@ final readonly class StatisticsRepository {
             ->select(
                 'r.period_start',
                 'r.period_end',
-                $qb->func()->count('m.' . $column),
-                $qb->func()->sum('m.' . $column),
-                $qb->func()->min('m.' . $column),
-                $qb->func()->max('m.' . $column),
+                $qb->func()->count($column),
+                $qb->func()->sum($column),
+                $qb->func()->min($column),
+                $qb->func()->max($column),
             )
             ->from('usage_stats_reports', 'r')
             ->innerJoin('r', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'r.id'))
@@ -164,20 +163,19 @@ final readonly class StatisticsRepository {
             ->andWhere($qb->expr()->gte('r.period_end', $qb->createNamedParameter($this->formatDateTime($from))))
             ->andWhere($qb->expr()->lte('r.period_end', $qb->createNamedParameter($this->formatDateTime($to))))
             ->groupBy('r.period_start', 'r.period_end')
-            ->orderBy('r.period_end', 'ASC')
             ->executeQuery();
 
         $history = [];
         foreach ($result->iterateNumeric() as $row) {
             $count = (int)$row[2];
-            $total = $row[3] === null ? null : (float)$row[3];
+            $total = (float)$row[3];
             $history[] = [
                 'periodStart' => (string)$row[0],
                 'periodEnd' => (string)$row[1],
                 'count' => $count,
-                'average' => $count === 0 || $total === null ? null : round($total / $count, 2),
-                'min' => $row[4] === null ? null : (float)$row[4],
-                'max' => $row[5] === null ? null : (float)$row[5],
+                'average' => round($total / $count, 2),
+                'min' => (float)$row[4],
+                'max' => (float)$row[5],
                 'total' => $total,
             ];
         }
@@ -192,18 +190,20 @@ final readonly class StatisticsRepository {
      */
     private function mergeNumericalEvaluations(array $left, array $right): array {
         $count = $left['count'] + $right['count'];
-        $total = ($left['total'] ?? 0.0) + ($right['total'] ?? 0.0);
-        $hasValues = $count > 0;
+        if ($count === 0) {
+            return ['count' => 0, 'average' => null, 'min' => null, 'max' => null, 'total' => null];
+        }
 
-        $mins = array_values(array_filter([$left['min'], $right['min']], static fn ($value): bool => $value !== null));
-        $maxs = array_values(array_filter([$left['max'], $right['max']], static fn ($value): bool => $value !== null));
+        $total = ($left['total'] ?? 0.0) + ($right['total'] ?? 0.0);
+        $mins = array_filter([$left['min'], $right['min']], static fn ($value): bool => $value !== null);
+        $maxs = array_filter([$left['max'], $right['max']], static fn ($value): bool => $value !== null);
 
         return [
             'count' => $count,
-            'average' => $hasValues ? round($total / $count, 2) : null,
-            'min' => $mins === [] ? null : min($mins),
-            'max' => $maxs === [] ? null : max($maxs),
-            'total' => $hasValues ? $total : null,
+            'average' => round($total / $count, 2),
+            'min' => min($mins),
+            'max' => max($maxs),
+            'total' => $total,
         ];
     }
 
@@ -242,7 +242,6 @@ final readonly class StatisticsRepository {
             'number' => (float)$row['value_number'],
             'boolean' => $this->readBoolean($row['value_boolean']),
             'string' => (string)$row['value_string'],
-            default => null,
         };
     }
 
