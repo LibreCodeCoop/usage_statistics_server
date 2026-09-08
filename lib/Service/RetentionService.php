@@ -83,9 +83,7 @@ final readonly class RetentionService {
             ->setMaxResults(self::BATCH_SIZE)
             ->executeQuery();
 
-        $ids = array_map('intval', $result->fetchFirstColumn());
-        $result->closeCursor();
-        return $ids;
+        return array_map('intval', $result->fetchFirstColumn());
     }
 
     private function formatDateTime(\DateTimeImmutable $dateTime): string {
