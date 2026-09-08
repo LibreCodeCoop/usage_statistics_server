@@ -39,12 +39,17 @@ final readonly class ReportRepository {
 
             foreach ($report->metrics as $metric) {
                 $metricQb = $this->db->getQueryBuilder();
+                $numericValue = in_array($metric->type, ['integer', 'number'], true)
+                    ? (float)$metric->value
+                    : null;
+
                 $metricQb->insert('usage_stats_metrics')->values([
                     'report_id' => $metricQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
                     'category' => $metricQb->createNamedParameter($metric->category),
                     'metric_key' => $metricQb->createNamedParameter($metric->key),
                     'metric_type' => $metricQb->createNamedParameter($metric->type),
                     'metric_value' => $metricQb->createNamedParameter(json_encode($metric->value, JSON_THROW_ON_ERROR)),
+                    'numeric_value' => $metricQb->createNamedParameter($numericValue),
                 ])->executeStatement();
             }
 
