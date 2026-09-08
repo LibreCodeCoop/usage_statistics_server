@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Vitor Mattos
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "usage-statistics-server"
+SPDX-PackageDownloadLocation = "https://github.com/vitormattos/usage-statistics-server/"
+
+default-license = "AGPL-3.0-or-later"
+default-copyright = "2026 Vitor Mattos"
+
+[[annotations]]
+path = [
+    ".gitignore",
+    "README.md",
+    "appinfo/info.xml",
+    "composer.json",
+    "composer.lock",
+    "docs/**/*.md",
+    "infection.json5",
+    "openapi*.json",
+    "package.json",
+    "package-lock.json",
+    "phpstan.neon",
+    "psalm.xml",
+    "redocly.yaml",
+    "src/types/**/*.ts",
+    "tests/php/phpunit.xml",
+    "vendor-bin/**/composer.json",
+    "vendor-bin/**/composer.lock"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Vitor Mattos"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
