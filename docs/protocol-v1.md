@@ -79,6 +79,8 @@ Version of the metric schema defined by the sending application.
 
 The server stores this value so historical reports remain interpretable after an application evolves its metrics.
 
+The `usage_statistics_server` implementation requires the `(application, schemaVersion)` definition to be registered by an administrator before reports using it are accepted. Registered schema versions are immutable.
+
 ### `period`
 
 The reporting interval represented by period metrics.
@@ -120,6 +122,8 @@ Application schemas SHOULD document whether each metric is one of:
 
 Servers MUST NOT blindly sum repeated snapshots across periods.
 
+The `usage_statistics_server` application schema also declares the allowed aggregation for each metric (`distribution`, `numerical`, or `none`).
+
 ## Idempotency
 
 The logical identity of a report is:
@@ -139,7 +143,7 @@ A repeated submission MAY:
 
 but it MUST NOT create a second logical report that would double-count statistics.
 
-The server implementation MUST document which behavior it uses.
+The `usage_statistics_server` implementation keeps the first accepted report immutable and returns `already_received` for an identical logical report submitted again.
 
 ## Validation
 
@@ -153,8 +157,9 @@ The server MUST validate at least:
 - metric count per report;
 - category/key format and length;
 - metric type/value compatibility;
-- scalar value size;
-- application-specific schema when configured.
+- scalar value size.
+
+The `usage_statistics_server` implementation additionally requires a registered application schema and rejects unknown metrics, type mismatches, and missing required metrics.
 
 Invalid reports MUST NOT be partially persisted.
 
