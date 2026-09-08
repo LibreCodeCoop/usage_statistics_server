@@ -37,9 +37,6 @@ final class SchemaValidator {
             if (!is_array($rawMetric)) {
                 throw new InvalidReport('Invalid schema metric.');
             }
-            if (array_is_list($rawMetric)) {
-                throw new InvalidReport('Invalid schema metric.');
-            }
             $this->assertAllowedKeys($rawMetric, ['category', 'key', 'type', 'kind', 'aggregation', 'description', 'required'], 'schema metric');
 
             $category = $this->identifier($rawMetric['category'] ?? null, 'metric category', 128);
