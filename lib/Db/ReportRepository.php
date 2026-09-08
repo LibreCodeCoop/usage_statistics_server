@@ -107,25 +107,67 @@ final readonly class ReportRepository {
     }
 
     private function updateInstallation(Report $report, int $reportId, \DateTimeImmutable $receivedAt): void {
-        $qb = $this->db->getQueryBuilder();
-        $updated = $qb->update('usage_stats_installations')
-            ->set('last_seen_at', $qb->createNamedParameter($this->formatDateTime($receivedAt)))
-            ->set('last_report_id', $qb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT))
-            ->where($qb->expr()->eq('application', $qb->createNamedParameter($report->application)))
-            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($report->installationId)))
-            ->executeStatement();
-
-        if ($updated > 0) {
+        $installation = $this->findInstallation($report->application, $report->installationId);
+        if ($installation === null) {
+            $insertQb = $this->db->getQueryBuilder();
+            $insertQb->insert('usage_stats_installations')->values([
+                'application' => $insertQb->createNamedParameter($report->application),
+                'installation_id' => $insertQb->createNamedParameter($report->installationId),
+                'last_seen_at' => $insertQb->createNamedParameter($this->formatDateTime($receivedAt)),
+                'last_report_id' => $insertQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
+            ])->executeStatement();
             return;
         }
 
-        $insertQb = $this->db->getQueryBuilder();
-        $insertQb->insert('usage_stats_installations')->values([
-            'application' => $insertQb->createNamedParameter($report->application),
-            'installation_id' => $insertQb->createNamedParameter($report->installationId),
-            'last_seen_at' => $insertQb->createNamedParameter($this->formatDateTime($receivedAt)),
-            'last_report_id' => $insertQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
-        ])->executeStatement();
+        $qb = $this->db->getQueryBuilder();
+        $qb->update('usage_stats_installations')
+            ->set('last_seen_at', $qb->createNamedParameter($this->formatDateTime($receivedAt)))
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter($report->application)))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($report->installationId)));
+
+        if ($this->isNewerThanCurrentReport($report, $installation['lastReportId'])) {
+            $qb->set('last_report_id', $qb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT));
+        }
+
+        $qb->executeStatement();
+    }
+
+    /** @return array{lastReportId:int}|null */
+    private function findInstallation(string $application, string $installationId): ?array {
+        $qb = $this->db->getQueryBuilder();
+        $row = $qb->select('last_report_id')
+            ->from('usage_stats_installations')
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($installationId)))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return null;
+        }
+
+        return ['lastReportId' => (int)$row['last_report_id']];
+    }
+
+    private function isNewerThanCurrentReport(Report $report, int $currentReportId): bool {
+        $qb = $this->db->getQueryBuilder();
+        $row = $qb->select('period_start', 'period_end')
+            ->from('usage_stats_reports')
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($currentReportId, IQueryBuilder::PARAM_INT)))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return true;
+        }
+
+        $incomingEnd = $this->formatDateTime($report->periodEnd);
+        $currentEnd = (string)$row['period_end'];
+        if ($incomingEnd !== $currentEnd) {
+            return $incomingEnd > $currentEnd;
+        }
+
+        return $this->formatDateTime($report->periodStart) > (string)$row['period_start'];
     }
 
     /** @return array{id:int,schemaVersion:int}|null */
