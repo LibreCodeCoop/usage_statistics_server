@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Application metric schemas
 
 The server uses versioned application schemas as an allowlist and interpretation contract for submitted metrics.
