@@ -10,6 +10,8 @@ use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 final readonly class ReportRepository {
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     public function __construct(private IDBConnection $db) {
     }
 
@@ -30,9 +32,9 @@ final readonly class ReportRepository {
                 'application' => $qb->createNamedParameter($report->application),
                 'installation_id' => $qb->createNamedParameter($report->installationId),
                 'schema_version' => $qb->createNamedParameter($report->schemaVersion, IQueryBuilder::PARAM_INT),
-                'period_start' => $qb->createNamedParameter($report->periodStart, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
-                'period_end' => $qb->createNamedParameter($report->periodEnd, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
-                'received_at' => $qb->createNamedParameter($receivedAt, IQueryBuilder::PARAM_DATETIME_IMMUTABLE),
+                'period_start' => $qb->createNamedParameter($this->formatDateTime($report->periodStart)),
+                'period_end' => $qb->createNamedParameter($this->formatDateTime($report->periodEnd)),
+                'received_at' => $qb->createNamedParameter($this->formatDateTime($receivedAt)),
                 'raw_payload' => $qb->createNamedParameter(json_encode($rawPayload, JSON_THROW_ON_ERROR)),
             ])->executeStatement();
             $reportId = $qb->getLastInsertId();
@@ -60,23 +62,25 @@ final readonly class ReportRepository {
                     'installation_id' => $report->installationId,
                 ],
                 [
-                    'last_seen_at' => $receivedAt,
+                    'last_seen_at' => $this->formatDateTime($receivedAt),
                     'last_report_id' => $reportId,
                 ],
             );
 
             $this->db->commit();
             return ['id' => $reportId, 'created' => true];
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            if (in_array($e->getReason(), [Exception::REASON_CONSTRAINT_VIOLATION, Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION], true)) {
+
+            if ($e instanceof Exception && in_array($e->getReason(), [Exception::REASON_CONSTRAINT_VIOLATION, Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION], true)) {
                 $id = $this->findId($report);
                 if ($id !== null) {
                     return ['id' => $id, 'created' => false];
                 }
             }
+
             throw $e;
         }
     }
@@ -87,9 +91,17 @@ final readonly class ReportRepository {
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($report->application)))
             ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($report->installationId)))
             ->andWhere($qb->expr()->eq('schema_version', $qb->createNamedParameter($report->schemaVersion, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('period_start', $qb->createNamedParameter($report->periodStart, IQueryBuilder::PARAM_DATETIME_IMMUTABLE)))
-            ->andWhere($qb->expr()->eq('period_end', $qb->createNamedParameter($report->periodEnd, IQueryBuilder::PARAM_DATETIME_IMMUTABLE)))
-            ->executeQuery()->fetchOne();
+            ->andWhere($qb->expr()->eq('period_start', $qb->createNamedParameter($this->formatDateTime($report->periodStart))))
+            ->andWhere($qb->expr()->eq('period_end', $qb->createNamedParameter($this->formatDateTime($report->periodEnd))))
+            ->executeQuery()
+            ->fetchOne();
+
         return $result === false ? null : (int)$result;
+    }
+
+    private function formatDateTime(\DateTimeImmutable $dateTime): string {
+        return $dateTime
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format(self::DB_DATETIME_FORMAT);
     }
 }
