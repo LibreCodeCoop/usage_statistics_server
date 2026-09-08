@@ -16,6 +16,8 @@ use Test\TestCase;
 
 #[Group('DB')]
 final class RetentionServiceTest extends TestCase {
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     private IDBConnection $db;
     private ReportRepository $reports;
     private SchemaRepository $schemas;
@@ -84,10 +86,7 @@ final class RetentionServiceTest extends TestCase {
     private function setReportReceivedAt(int $reportId, string $date): void {
         $qb = $this->db->getQueryBuilder();
         $qb->update('usage_stats_reports')
-            ->set('received_at', $qb->createNamedParameter(
-                new \DateTimeImmutable($date),
-                IQueryBuilder::PARAM_DATETIME_IMMUTABLE,
-            ))
+            ->set('received_at', $qb->createNamedParameter($this->formatDateTime($date)))
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT)))
             ->executeStatement();
     }
@@ -95,17 +94,18 @@ final class RetentionServiceTest extends TestCase {
     private function setInstallationLastSeen(string $installationId, string $date): void {
         $qb = $this->db->getQueryBuilder();
         $qb->update('usage_stats_installations')
-            ->set('last_seen_at', $qb->createNamedParameter(
-                new \DateTimeImmutable($date),
-                IQueryBuilder::PARAM_DATETIME_IMMUTABLE,
-            ))
+            ->set('last_seen_at', $qb->createNamedParameter($this->formatDateTime($date)))
             ->where($qb->expr()->eq('installation_id', $qb->createNamedParameter($installationId)))
             ->executeStatement();
     }
 
     private function countRows(string $table): int {
         $qb = $this->db->getQueryBuilder();
-        return (int)$qb->select('COUNT(*)')->from($table)->executeQuery()->fetchOne();
+        return (int)$qb
+            ->select($qb->func()->count('*'))
+            ->from($table)
+            ->executeQuery()
+            ->fetchOne();
     }
 
     private function clearTables(): void {
@@ -113,5 +113,11 @@ final class RetentionServiceTest extends TestCase {
         $this->db->getQueryBuilder()->delete('usage_stats_installations')->executeStatement();
         $this->db->getQueryBuilder()->delete('usage_stats_reports')->executeStatement();
         $this->db->getQueryBuilder()->delete('usage_stats_schemas')->executeStatement();
+    }
+
+    private function formatDateTime(string $date): string {
+        return (new \DateTimeImmutable($date))
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format(self::DB_DATETIME_FORMAT);
     }
 }
