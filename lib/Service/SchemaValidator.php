@@ -24,14 +24,20 @@ final class SchemaValidator {
         }
 
         $rawMetrics = $definition['metrics'] ?? null;
-        if (!is_array($rawMetrics) || !array_is_list($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > 256) {
+        if (!is_array($rawMetrics)) {
+            throw new InvalidReport('Schema metrics must be a non-empty bounded list.');
+        }
+        if (!array_is_list($rawMetrics) || $rawMetrics === [] || count($rawMetrics) > 256) {
             throw new InvalidReport('Schema metrics must be a non-empty bounded list.');
         }
 
         $metrics = [];
         $seen = [];
         foreach ($rawMetrics as $rawMetric) {
-            if (!is_array($rawMetric) || array_is_list($rawMetric)) {
+            if (!is_array($rawMetric)) {
+                throw new InvalidReport('Invalid schema metric.');
+            }
+            if (array_is_list($rawMetric)) {
                 throw new InvalidReport('Invalid schema metric.');
             }
             $this->assertAllowedKeys($rawMetric, ['category', 'key', 'type', 'kind', 'aggregation', 'description', 'required'], 'schema metric');
