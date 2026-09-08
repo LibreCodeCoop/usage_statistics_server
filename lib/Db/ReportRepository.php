@@ -55,12 +55,8 @@ final readonly class ReportRepository {
                     'installation_id' => $report->installationId,
                 ],
                 [
-                    'first_seen_at' => $receivedAt,
                     'last_seen_at' => $receivedAt,
                     'last_report_id' => $reportId,
-                ],
-                [
-                    'first_seen_at' => $receivedAt,
                 ],
             );
 
