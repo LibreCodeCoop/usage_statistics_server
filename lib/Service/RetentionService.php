@@ -50,11 +50,10 @@ final readonly class RetentionService {
                     ->executeStatement();
 
                 $this->db->commit();
-            } catch (\Throwable $e) {
+            } finally {
                 if ($this->db->inTransaction()) {
                     $this->db->rollBack();
                 }
-                throw $e;
             }
         }
 
