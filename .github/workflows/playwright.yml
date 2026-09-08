@@ -14,7 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      php-min: ${{ steps.versions.outputs.php-min }}
+      branches-max: ${{ steps.versions.outputs.branches-max }}
+
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get version matrix
+        id: versions
+        uses: nextcloud-libraries/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3
+
   playwright:
+    needs: matrix
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -28,7 +45,7 @@ jobs:
           persist-credentials: false
           submodules: true
           repository: nextcloud/server
-          ref: stable36
+          ref: ${{ needs.matrix.outputs.branches-max }}
 
       - name: Checkout app
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,10 +61,10 @@ jobs:
       - name: Set up npm
         run: npm i -g 'npm@^11.3'
 
-      - name: Set up PHP
+      - name: Set up PHP ${{ needs.matrix.outputs.php-min }}
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
-          php-version: '8.4'
+          php-version: ${{ needs.matrix.outputs.php-min }}
           extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, sockets, sqlite, pdo_sqlite, xmlreader, xmlwriter, zip, zlib
           coverage: none
           ini-file: development
