@@ -14,7 +14,7 @@ final readonly class StatisticsRepository {
 
     public function countActiveInstallations(string $application, \DateTimeImmutable $since): int {
         $qb = $this->db->getQueryBuilder();
-        $result = $qb->select('COUNT(*) AS active_count')
+        $result = $qb->select($qb->func()->count('*'))
             ->from('usage_stats_installations')
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($application)))
             ->andWhere($qb->expr()->gte('last_seen_at', $qb->createNamedParameter($this->formatDateTime($since))))
@@ -27,7 +27,8 @@ final readonly class StatisticsRepository {
     /** @return list<array{value:mixed,count:int}> */
     public function currentDistribution(string $application, string $category, string $key): array {
         $qb = $this->db->getQueryBuilder();
-        $result = $qb->select('m.metric_value', 'COUNT(*) AS value_count')
+        $result = $qb
+            ->select('m.metric_value', $qb->func()->count('*', 'value_count'))
             ->from('usage_stats_installations', 'i')
             ->innerJoin('i', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'i.last_report_id'))
             ->where($qb->expr()->eq('i.application', $qb->createNamedParameter($application)))
@@ -38,13 +39,12 @@ final readonly class StatisticsRepository {
             ->executeQuery();
 
         $distribution = [];
-        while ($row = $result->fetch()) {
+        foreach ($result->iterateAssociative() as $row) {
             $distribution[] = [
                 'value' => json_decode((string)$row['metric_value'], true, 512, JSON_THROW_ON_ERROR),
                 'count' => (int)$row['value_count'],
             ];
         }
-        $result->closeCursor();
 
         return $distribution;
     }
@@ -53,11 +53,12 @@ final readonly class StatisticsRepository {
     public function currentNumericalEvaluation(string $application, string $category, string $key): array {
         $qb = $this->db->getQueryBuilder();
         $row = $qb
-            ->select('COUNT(m.numeric_value) AS value_count')
-            ->addSelect($qb->createFunction('AVG(m.numeric_value) AS average_value'))
-            ->addSelect($qb->createFunction('MIN(m.numeric_value) AS min_value'))
-            ->addSelect($qb->createFunction('MAX(m.numeric_value) AS max_value'))
-            ->addSelect($qb->createFunction('SUM(m.numeric_value) AS total_value'))
+            ->select(
+                $qb->func()->count('m.numeric_value'),
+                $qb->func()->sum('m.numeric_value'),
+                $qb->func()->min('m.numeric_value'),
+                $qb->func()->max('m.numeric_value'),
+            )
             ->from('usage_stats_installations', 'i')
             ->innerJoin('i', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'i.last_report_id'))
             ->where($qb->expr()->eq('i.application', $qb->createNamedParameter($application)))
@@ -65,18 +66,22 @@ final readonly class StatisticsRepository {
             ->andWhere($qb->expr()->eq('m.metric_key', $qb->createNamedParameter($key)))
             ->andWhere($qb->expr()->isNotNull('m.numeric_value'))
             ->executeQuery()
-            ->fetch();
+            ->fetchNumeric();
 
         if ($row === false) {
             return ['count' => 0, 'average' => null, 'min' => null, 'max' => null, 'total' => null];
         }
 
+        [$countValue, $totalValue, $minValue, $maxValue] = $row;
+        $count = (int)$countValue;
+        $total = $totalValue === null ? null : (float)$totalValue;
+
         return [
-            'count' => (int)$row['value_count'],
-            'average' => $row['average_value'] === null ? null : round((float)$row['average_value'], 2),
-            'min' => $row['min_value'] === null ? null : (float)$row['min_value'],
-            'max' => $row['max_value'] === null ? null : (float)$row['max_value'],
-            'total' => $row['total_value'] === null ? null : (float)$row['total_value'],
+            'count' => $count,
+            'average' => $count === 0 || $total === null ? null : round($total / $count, 2),
+            'min' => $minValue === null ? null : (float)$minValue,
+            'max' => $maxValue === null ? null : (float)$maxValue,
+            'total' => $total,
         ];
     }
 
@@ -90,11 +95,14 @@ final readonly class StatisticsRepository {
     ): array {
         $qb = $this->db->getQueryBuilder();
         $result = $qb
-            ->select('r.period_start', 'r.period_end', 'COUNT(m.numeric_value) AS value_count')
-            ->addSelect($qb->createFunction('AVG(m.numeric_value) AS average_value'))
-            ->addSelect($qb->createFunction('MIN(m.numeric_value) AS min_value'))
-            ->addSelect($qb->createFunction('MAX(m.numeric_value) AS max_value'))
-            ->addSelect($qb->createFunction('SUM(m.numeric_value) AS total_value'))
+            ->select(
+                'r.period_start',
+                'r.period_end',
+                $qb->func()->count('m.numeric_value'),
+                $qb->func()->sum('m.numeric_value'),
+                $qb->func()->min('m.numeric_value'),
+                $qb->func()->max('m.numeric_value'),
+            )
             ->from('usage_stats_reports', 'r')
             ->innerJoin('r', 'usage_stats_metrics', 'm', $qb->expr()->eq('m.report_id', 'r.id'))
             ->where($qb->expr()->eq('r.application', $qb->createNamedParameter($application)))
@@ -108,18 +116,21 @@ final readonly class StatisticsRepository {
             ->executeQuery();
 
         $history = [];
-        while ($row = $result->fetch()) {
+        foreach ($result->iterateNumeric() as $row) {
+            [$periodStart, $periodEnd, $countValue, $totalValue, $minValue, $maxValue] = $row;
+            $count = (int)$countValue;
+            $total = $totalValue === null ? null : (float)$totalValue;
+
             $history[] = [
-                'periodStart' => (string)$row['period_start'],
-                'periodEnd' => (string)$row['period_end'],
-                'count' => (int)$row['value_count'],
-                'average' => $row['average_value'] === null ? null : round((float)$row['average_value'], 2),
-                'min' => $row['min_value'] === null ? null : (float)$row['min_value'],
-                'max' => $row['max_value'] === null ? null : (float)$row['max_value'],
-                'total' => $row['total_value'] === null ? null : (float)$row['total_value'],
+                'periodStart' => (string)$periodStart,
+                'periodEnd' => (string)$periodEnd,
+                'count' => $count,
+                'average' => $count === 0 || $total === null ? null : round($total / $count, 2),
+                'min' => $minValue === null ? null : (float)$minValue,
+                'max' => $maxValue === null ? null : (float)$maxValue,
+                'total' => $total,
             ];
         }
-        $result->closeCursor();
 
         return $history;
     }
