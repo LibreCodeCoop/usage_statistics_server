@@ -156,6 +156,20 @@ The `usage_statistics_server` implementation keeps the first accepted report imm
 - a retry for the same logical period using another schema version is rejected as a conflict;
 - neither case creates a second logical report.
 
+## Current installation state
+
+Historical reports can arrive out of order, so receive order MUST NOT decide which report represents the current state of an installation.
+
+The `usage_statistics_server` implementation orders reports by reporting period:
+
+1. the report with the later `period.end` is newer;
+2. when `period.end` is equal, the report with the later `period.start` is newer;
+3. the current report pointer only moves forward according to that ordering.
+
+`last_seen_at` is independent from the current report pointer and records recent valid reporting activity. This means an older delayed report can refresh the installation activity timestamp without replacing its current metric snapshot.
+
+The current-state update is performed with a conditional database update rather than a read-then-write decision, so concurrent submissions cannot make the pointer move backwards.
+
 ## Storage guidance
 
 Servers SHOULD persist normalized validated fields rather than the arbitrary request body.
