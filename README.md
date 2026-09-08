@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Usage Statistics Server
 
 A generic Nextcloud app for receiving, storing, aggregating, and exposing privacy-preserving usage statistics from participating applications.
