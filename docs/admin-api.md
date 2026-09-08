@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Administrative statistics API
 
 The administrative API exposes aggregated usage statistics to authenticated Nextcloud administrators. These endpoints are not public by default.
