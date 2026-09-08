@@ -21,7 +21,8 @@ final class AdminSettings implements ISettings {
      */
     #[Override]
     public function getForm(): TemplateResponse {
-        Util::addScript(Application::APP_ID, 'usage-statistics-server-settings');
+        Util::addStyle(Application::APP_ID, Application::APP_ID . '-settings');
+        Util::addScript(Application::APP_ID, Application::APP_ID . '-settings');
 
         return new TemplateResponse(Application::APP_ID, 'settings/admin', [], '');
     }
