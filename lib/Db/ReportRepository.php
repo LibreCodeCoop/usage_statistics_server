@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\UsageStatisticsServer\Db;
 
+use OCA\UsageStatisticsServer\Service\ConflictingReport;
+use OCA\UsageStatisticsServer\Service\Metric;
 use OCA\UsageStatisticsServer\Service\Report;
 use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
@@ -16,15 +18,16 @@ final readonly class ReportRepository {
     }
 
     /** @return array{id:int,created:bool} */
-    public function store(Report $report, array $rawPayload): array {
-        return $this->storeWithRetry($report, $rawPayload, true);
+    public function store(Report $report): array {
+        return $this->storeWithRetry($report, true);
     }
 
     /** @return array{id:int,created:bool} */
-    private function storeWithRetry(Report $report, array $rawPayload, bool $allowRetry): array {
-        $existing = $this->findId($report);
+    private function storeWithRetry(Report $report, bool $allowRetry): array {
+        $existing = $this->findByLogicalIdentity($report);
         if ($existing !== null) {
-            return ['id' => $existing, 'created' => false];
+            $this->assertSameSchema($report, $existing['schemaVersion']);
+            return ['id' => $existing['id'], 'created' => false];
         }
 
         $receivedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
@@ -40,24 +43,11 @@ final readonly class ReportRepository {
                 'period_start' => $qb->createNamedParameter($this->formatDateTime($report->periodStart)),
                 'period_end' => $qb->createNamedParameter($this->formatDateTime($report->periodEnd)),
                 'received_at' => $qb->createNamedParameter($this->formatDateTime($receivedAt)),
-                'raw_payload' => $qb->createNamedParameter(json_encode($rawPayload, JSON_THROW_ON_ERROR)),
             ])->executeStatement();
             $reportId = $qb->getLastInsertId();
 
             foreach ($report->metrics as $metric) {
-                $metricQb = $this->db->getQueryBuilder();
-                $numericValue = in_array($metric->type, ['integer', 'number'], true)
-                    ? (float)$metric->value
-                    : null;
-
-                $metricQb->insert('usage_stats_metrics')->values([
-                    'report_id' => $metricQb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
-                    'category' => $metricQb->createNamedParameter($metric->category),
-                    'metric_key' => $metricQb->createNamedParameter($metric->key),
-                    'metric_type' => $metricQb->createNamedParameter($metric->type),
-                    'metric_value' => $metricQb->createNamedParameter(json_encode($metric->value, JSON_THROW_ON_ERROR)),
-                    'numeric_value' => $metricQb->createNamedParameter($numericValue),
-                ])->executeStatement();
+                $this->insertMetric($reportId, $metric);
             }
 
             $this->updateInstallation($report, $reportId, $receivedAt);
@@ -70,18 +60,50 @@ final readonly class ReportRepository {
             }
 
             if ($e instanceof Exception && in_array($e->getReason(), [Exception::REASON_CONSTRAINT_VIOLATION, Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION], true)) {
-                $id = $this->findId($report);
-                if ($id !== null) {
-                    return ['id' => $id, 'created' => false];
+                $existing = $this->findByLogicalIdentity($report);
+                if ($existing !== null) {
+                    $this->assertSameSchema($report, $existing['schemaVersion']);
+                    return ['id' => $existing['id'], 'created' => false];
                 }
 
                 if ($allowRetry) {
-                    return $this->storeWithRetry($report, $rawPayload, false);
+                    return $this->storeWithRetry($report, false);
                 }
             }
 
             throw $e;
         }
+    }
+
+    private function insertMetric(int $reportId, Metric $metric): void {
+        $qb = $this->db->getQueryBuilder();
+        $values = [
+            'report_id' => $qb->createNamedParameter($reportId, IQueryBuilder::PARAM_INT),
+            'category' => $qb->createNamedParameter($metric->category),
+            'metric_key' => $qb->createNamedParameter($metric->key),
+            'metric_type' => $qb->createNamedParameter($metric->type),
+            'value_integer' => $qb->createNamedParameter(null),
+            'value_number' => $qb->createNamedParameter(null),
+            'value_boolean' => $qb->createNamedParameter(null),
+            'value_string' => $qb->createNamedParameter(null),
+        ];
+
+        switch ($metric->type) {
+            case 'integer':
+                $values['value_integer'] = $qb->createNamedParameter((int)$metric->value, IQueryBuilder::PARAM_INT);
+                break;
+            case 'number':
+                $values['value_number'] = $qb->createNamedParameter((float)$metric->value);
+                break;
+            case 'boolean':
+                $values['value_boolean'] = $qb->createNamedParameter((bool)$metric->value, IQueryBuilder::PARAM_BOOL);
+                break;
+            case 'string':
+                $values['value_string'] = $qb->createNamedParameter((string)$metric->value);
+                break;
+        }
+
+        $qb->insert('usage_stats_metrics')->values($values)->executeStatement();
     }
 
     private function updateInstallation(Report $report, int $reportId, \DateTimeImmutable $receivedAt): void {
@@ -106,18 +128,31 @@ final readonly class ReportRepository {
         ])->executeStatement();
     }
 
-    private function findId(Report $report): ?int {
+    /** @return array{id:int,schemaVersion:int}|null */
+    private function findByLogicalIdentity(Report $report): ?array {
         $qb = $this->db->getQueryBuilder();
-        $result = $qb->select('id')->from('usage_stats_reports')
+        $row = $qb->select('id', 'schema_version')->from('usage_stats_reports')
             ->where($qb->expr()->eq('application', $qb->createNamedParameter($report->application)))
             ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter($report->installationId)))
-            ->andWhere($qb->expr()->eq('schema_version', $qb->createNamedParameter($report->schemaVersion, IQueryBuilder::PARAM_INT)))
             ->andWhere($qb->expr()->eq('period_start', $qb->createNamedParameter($this->formatDateTime($report->periodStart))))
             ->andWhere($qb->expr()->eq('period_end', $qb->createNamedParameter($this->formatDateTime($report->periodEnd))))
             ->executeQuery()
-            ->fetchOne();
+            ->fetchAssociative();
 
-        return $result === false ? null : (int)$result;
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'id' => (int)$row['id'],
+            'schemaVersion' => (int)$row['schema_version'],
+        ];
+    }
+
+    private function assertSameSchema(Report $report, int $existingSchemaVersion): void {
+        if ($existingSchemaVersion !== $report->schemaVersion) {
+            throw new ConflictingReport('A report for this installation and period already exists with a different schema version.');
+        }
     }
 
     private function formatDateTime(\DateTimeImmutable $dateTime): string {
