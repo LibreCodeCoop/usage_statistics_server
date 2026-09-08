@@ -57,17 +57,7 @@ final class OutOfOrderReportTest extends TestCase {
             'total' => 20.0,
         ], $statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed'));
 
-        $installationQb = $this->db->getQueryBuilder();
-        $installation = $installationQb->select('last_period_start', 'last_period_end')
-            ->from('usage_stats_installations')
-            ->where($installationQb->expr()->eq('application', $installationQb->createNamedParameter('libresign')))
-            ->andWhere($installationQb->expr()->eq('installation_id', $installationQb->createNamedParameter('installation-delayed')))
-            ->executeQuery()
-            ->fetchAssociative();
-
-        self::assertIsArray($installation);
-        self::assertSame('2026-08-01 00:00:00', (string)$installation['last_period_start']);
-        self::assertSame('2026-09-01 00:00:00', (string)$installation['last_period_end']);
+        $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
 
         $history = $statistics->numericalHistory(
             'libresign',
@@ -77,6 +67,68 @@ final class OutOfOrderReportTest extends TestCase {
             new \DateTimeImmutable('2026-09-02T00:00:00Z'),
         );
         self::assertCount(2, $history);
+    }
+
+    public function testLaterStartWinsWhenReportsHaveTheSamePeriodEnd(): void {
+        $factory = new ReportFactory();
+        $reports = new ReportRepository($this->db);
+        $statistics = new StatisticsRepository($this->db);
+
+        $reports->store($factory->fromPayload($this->payload(
+            '2026-07-01T00:00:00Z',
+            '2026-09-01T00:00:00Z',
+            '1.0.0',
+            10,
+        )));
+        $reports->store($factory->fromPayload($this->payload(
+            '2026-08-01T00:00:00Z',
+            '2026-09-01T00:00:00Z',
+            '2.0.0',
+            20,
+        )));
+
+        self::assertSame([
+            ['value' => '2.0.0', 'count' => 1],
+        ], $statistics->currentDistribution('libresign', 'server', 'version'));
+        $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
+    }
+
+    public function testEarlierStartCannotReplaceCurrentReportWithSamePeriodEnd(): void {
+        $factory = new ReportFactory();
+        $reports = new ReportRepository($this->db);
+        $statistics = new StatisticsRepository($this->db);
+
+        $reports->store($factory->fromPayload($this->payload(
+            '2026-08-01T00:00:00Z',
+            '2026-09-01T00:00:00Z',
+            '2.0.0',
+            20,
+        )));
+        $reports->store($factory->fromPayload($this->payload(
+            '2026-07-01T00:00:00Z',
+            '2026-09-01T00:00:00Z',
+            '1.0.0',
+            10,
+        )));
+
+        self::assertSame([
+            ['value' => '2.0.0', 'count' => 1],
+        ], $statistics->currentDistribution('libresign', 'server', 'version'));
+        $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
+    }
+
+    private function assertCurrentPeriod(string $start, string $end): void {
+        $qb = $this->db->getQueryBuilder();
+        $installation = $qb->select('last_period_start', 'last_period_end')
+            ->from('usage_stats_installations')
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter('libresign')))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter('installation-delayed')))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        self::assertIsArray($installation);
+        self::assertSame($start, (string)$installation['last_period_start']);
+        self::assertSame($end, (string)$installation['last_period_end']);
     }
 
     /** @return array<string,mixed> */
