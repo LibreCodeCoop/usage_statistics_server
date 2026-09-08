@@ -12,7 +12,7 @@
             "Migration"
         ]
     },
-    "bootstrap": "tests/php/bootstrap.php",
+    "bootstrap": "tests/php/infection-bootstrap.php",
     "phpUnit": {
         "configDir": "tests/php"
     },
