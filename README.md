@@ -5,53 +5,53 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Usage Statistics Server
 
-A generic Nextcloud app for receiving, storing, aggregating, and exposing privacy-preserving usage statistics from participating applications.
+Usage Statistics Server is a Nextcloud app that gives other apps a shared place to receive and aggregate opt-in usage statistics.
 
-LibreSign is expected to be its first real consumer, but the protocol and storage model are application-agnostic so other Nextcloud apps can use the same server.
+Instead of each app building its own collection backend, schema registry, retention policy, storage model, and administration API, it can send versioned reports to this server and reuse the same infrastructure.
 
-## Goals
+LibreSign is the first intended consumer, but the protocol is generic and can be used by other Nextcloud apps.
 
-- Receive opt-in, self-reported usage statistics from applications.
-- Preserve historical reports instead of only the latest snapshot.
-- Support both current-state and time-series aggregations.
-- Keep the ingestion protocol small and versioned.
-- Provide strict schema and payload validation.
-- Make repeated submissions for the same reporting period idempotent.
-- Treat submitted data as voluntary self-reported statistics, not as an authoritative census.
-- Provide operational abuse protection without pretending to solve client-side data falsification.
-- Use native Nextcloud APIs for persistence, migrations, routing, administration, and background processing.
+## Why use it?
 
-## Non-goals
+An app may need answers to questions such as:
 
-- Collect personal data or user-level event streams.
-- Prove that a self-hosted client reports truthful values.
-- Require a central registration or handshake before a client can submit a report.
-- Depend on LibreSign-specific concepts in the protocol or database model.
+- Which application versions are still being used?
+- Which optional features are enabled?
+- How does adoption change between releases?
+- How many participating installations reported during a period?
 
-## Architecture
+Usage Statistics Server provides the backend for these questions without requiring user-level event tracking or application-specific database tables.
 
-The server is a native Nextcloud app supporting Nextcloud 35 and 36.
+Reports are opt-in and self-reported by participating installations. The server validates them against an application schema, stores historical reporting periods, and exposes aggregated results to Nextcloud administrators.
 
-The storage model separates current installation state from immutable report history:
+## How it works
 
-- `usage_stats_installations`: materialized current state for each application/installation pair;
-- `usage_stats_reports`: immutable reporting-period submissions;
-- `usage_stats_metrics`: typed metric values belonging to reports.
+Each participating app:
 
-This allows current-state queries to use only the latest report for each installation while historical queries continue to use all reports.
+1. defines the metrics it can report in a versioned schema;
+2. shows users exactly which data can be submitted;
+3. sends periodic reports with a persistent installation identifier;
+4. lets this server validate, store, retain, and aggregate the reports.
 
-## Protocol
+The ingestion protocol is application-agnostic. Metric values are typed and schema-controlled, and retries for the same reporting period are idempotent.
 
-The ingestion protocol specification lives in [`docs/protocol-v1.md`](docs/protocol-v1.md).
+The server does not treat submitted data as an audited census. Reports come from software running on infrastructure controlled by the sender, so aggregated results should be described as statistics reported by participating installations.
 
-Administrative query endpoints are documented in [`docs/admin-api.md`](docs/admin-api.md).
+## Documentation
 
-## Data reliability
+Start here if you want to integrate another Nextcloud app:
 
-Reports are self-declared by participating installations. Server-side validation can verify protocol conformance, reject malformed values, make retries idempotent, limit operational abuse, and identify statistical anomalies. It cannot prove that software running on infrastructure controlled by the sender reported truthful application data.
+- [Protocol v1](docs/protocol-v1.md) — report format, validation rules, and ingestion behavior.
+- [Application schemas](docs/application-schemas.md) — how applications define metrics and evolve schemas.
+- [Administrative API](docs/admin-api.md) — endpoints for querying aggregated statistics.
+- [Retention](docs/retention.md) — historical data retention and cleanup behavior.
 
-Public or product-facing statistics must therefore be described as statistics reported by participating installations, not as an audited count of all installations.
+The OpenAPI specifications are generated from the Nextcloud controller contracts and are kept in the repository for API consumers and generated types.
 
-## Status
+## Current support
 
-Early design and implementation.
+The app currently targets Nextcloud 35 and 36 and is tested with SQLite, MySQL, MariaDB, and PostgreSQL.
+
+## License
+
+Usage Statistics Server is licensed under the GNU Affero General Public License v3 or later. See [COPYING](COPYING).
