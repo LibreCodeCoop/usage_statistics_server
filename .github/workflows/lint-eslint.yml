@@ -33,6 +33,6 @@ jobs:
       - name: Set up npm
         run: npm i -g 'npm@${{ steps.versions.outputs.npmVersion }}'
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-package-lock
       - name: Lint
         run: npm run lint
