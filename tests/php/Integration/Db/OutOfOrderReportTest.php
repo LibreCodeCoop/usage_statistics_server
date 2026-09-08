@@ -43,6 +43,15 @@ final class OutOfOrderReportTest extends TestCase {
             '2.0.0',
             20,
         )));
+
+        $oldLastSeenAt = '2000-01-01 00:00:00';
+        $qb = $this->db->getQueryBuilder();
+        $qb->update('usage_stats_installations')
+            ->set('last_seen_at', $qb->createNamedParameter($oldLastSeenAt))
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter('libresign')))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter('installation-delayed')))
+            ->executeStatement();
+
         $reports->store($factory->fromPayload($this->payload(
             '2026-07-01T00:00:00Z',
             '2026-08-01T00:00:00Z',
@@ -63,6 +72,7 @@ final class OutOfOrderReportTest extends TestCase {
         ], $statistics->currentNumericalEvaluation('libresign', 'usage', 'requests_completed', 'integer'));
 
         $this->assertCurrentPeriod('2026-08-01 00:00:00', '2026-09-01 00:00:00');
+        self::assertNotSame($oldLastSeenAt, $this->currentLastSeenAt());
 
         $history = $statistics->numericalHistory(
             'libresign',
@@ -135,6 +145,19 @@ final class OutOfOrderReportTest extends TestCase {
         self::assertIsArray($installation);
         self::assertSame($start, (string)$installation['last_period_start']);
         self::assertSame($end, (string)$installation['last_period_end']);
+    }
+
+    private function currentLastSeenAt(): string {
+        $qb = $this->db->getQueryBuilder();
+        $lastSeenAt = $qb->select('last_seen_at')
+            ->from('usage_stats_installations')
+            ->where($qb->expr()->eq('application', $qb->createNamedParameter('libresign')))
+            ->andWhere($qb->expr()->eq('installation_id', $qb->createNamedParameter('installation-delayed')))
+            ->executeQuery()
+            ->fetchOne();
+
+        self::assertIsString($lastSeenAt);
+        return $lastSeenAt;
     }
 
     /** @return array<string,mixed> */
