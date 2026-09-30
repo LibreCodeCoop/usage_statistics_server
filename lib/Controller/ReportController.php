@@ -22,11 +22,11 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\AppFramework\OCSController;
+use OCP\AppFramework\Controller;
 use OCP\IRequest;
 
 #[OpenAPI(tags: ['reports'])]
-final class ReportController extends OCSController {
+final class ReportController extends Controller {
     public function __construct(
         string $appName,
         IRequest $request,
