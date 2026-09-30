@@ -103,8 +103,9 @@ final class ReportSubmissionServiceTest extends TestCase {
     }
 
     private function countRows(string $table): int {
-        return (int)$this->db->getQueryBuilder()
-            ->select($this->db->getQueryBuilder()->func()->count())
+        $qb = $this->db->getQueryBuilder();
+        return (int)$qb
+            ->select($qb->func()->count())
             ->from($table)
             ->executeQuery()
             ->fetchOne();
