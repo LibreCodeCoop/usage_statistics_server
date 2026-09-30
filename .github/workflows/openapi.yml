@@ -25,6 +25,7 @@ jobs:
         with:
           persist-credentials: true
           submodules: true
+          ref: ${{ github.head_ref }}
 
       - name: Get php version
         id: php_versions
