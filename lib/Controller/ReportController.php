@@ -17,7 +17,7 @@ use OCA\UsageStatisticsServer\Service\ReportFactory;
 use OCA\UsageStatisticsServer\Service\SchemaValidator;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AnonRateLimit;
-use OCP\AppFramework\Http\Attribute\ApiRoute;
+use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
@@ -60,7 +60,7 @@ final class ReportController extends Controller {
     #[PublicPage]
     #[NoCSRFRequired]
     #[AnonRateLimit(limit: 60, period: 3600)]
-    #[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/reports', requirements: ['apiVersion' => '(v1)'])]
+    #[FrontpageRoute(verb: 'POST', url: '/api/{apiVersion}/reports', requirements: ['apiVersion' => '(v1)'])]
     public function create(
         int $protocolVersion,
         string $application,
