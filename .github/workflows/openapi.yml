@@ -9,7 +9,7 @@ name: OpenAPI
 on: pull_request
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: openapi-${{ github.head_ref || github.run_id }}
@@ -23,9 +23,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: true
+          persist-credentials: false
           submodules: true
-          ref: ${{ github.head_ref }}
 
       - name: Get php version
         id: php_versions
@@ -75,12 +74,11 @@ jobs:
             openapi-full.json
             src/types/openapi/*.ts
 
-      - name: Commit generated OpenAPI files
+      - name: Check generated OpenAPI files
         run: |
           if [[ -n "$(git status --porcelain -- openapi.json openapi-administration.json openapi-full.json src/types/openapi)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add openapi.json openapi-administration.json openapi-full.json src/types/openapi
-            git commit -m "docs: update generated OpenAPI contracts"
-            git push origin HEAD:${GITHUB_HEAD_REF}
+            echo 'Generated OpenAPI files are out of date. Run "composer run openapi" and commit the generated files.'
+            git status --short -- openapi.json openapi-administration.json openapi-full.json src/types/openapi
+            git --no-pager diff -- openapi.json openapi-administration.json openapi-full.json src/types/openapi
+            exit 1
           fi
