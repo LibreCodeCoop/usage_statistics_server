@@ -1,0 +1,508 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "usage_statistics_server",
+        "version": "0.0.1",
+        "description": "Receive and aggregate privacy-preserving usage statistics.",
+        "license": {
+            "name": "agpl"
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "basic_auth": {
+                "type": "http",
+                "scheme": "basic"
+            },
+            "bearer_auth": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "OCSMeta": {
+                "type": "object",
+                "required": [
+                    "status",
+                    "statuscode"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "statuscode": {
+                        "type": "integer"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "totalitems": {
+                        "type": "string"
+                    },
+                    "itemsperpage": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    },
+    "paths": {
+        "/ocs/v2.php/apps/usage_statistics_server/api/{apiVersion}/reports": {
+            "post": {
+                "operationId": "ocs_report-create",
+                "summary": "Submit a usage statistics report through the Nextcloud OCS API",
+                "description": "This endpoint has the same Protocol v1 request semantics as the plain JSON endpoint, but wraps the response using the standard Nextcloud OCS envelope.",
+                "tags": [
+                    "ocs_report"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "protocolVersion",
+                                    "application",
+                                    "installationId",
+                                    "schemaVersion",
+                                    "period",
+                                    "metrics"
+                                ],
+                                "properties": {
+                                    "protocolVersion": {
+                                        "type": "integer",
+                                        "format": "int64",
+                                        "description": "Usage statistics protocol version"
+                                    },
+                                    "application": {
+                                        "type": "string",
+                                        "description": "Stable application identifier"
+                                    },
+                                    "installationId": {
+                                        "type": "string",
+                                        "description": "Stable pseudonymous installation identifier"
+                                    },
+                                    "schemaVersion": {
+                                        "type": "integer",
+                                        "format": "int64",
+                                        "description": "Registered application schema version"
+                                    },
+                                    "period": {
+                                        "type": "object",
+                                        "description": "RFC3339 reporting period, start inclusive and end exclusive",
+                                        "required": [
+                                            "start",
+                                            "end"
+                                        ],
+                                        "properties": {
+                                            "start": {
+                                                "type": "string"
+                                            },
+                                            "end": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "metrics": {
+                                        "type": "array",
+                                        "description": "Aggregate metric values",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "category",
+                                                "key",
+                                                "type",
+                                                "value"
+                                            ],
+                                            "properties": {
+                                                "category": {
+                                                    "type": "string"
+                                                },
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "format": "int64"
+                                                        },
+                                                        {
+                                                            "type": "number",
+                                                            "format": "double"
+                                                        },
+                                                        {
+                                                            "type": "boolean"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Report accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "status"
+                                                    ],
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "error",
+                                                        "message"
+                                                    ],
+                                                    "properties": {
+                                                        "error": {
+                                                            "type": "string"
+                                                        },
+                                                        "message": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflicting report for the reporting period",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "error",
+                                                        "message"
+                                                    ],
+                                                    "properties": {
+                                                        "error": {
+                                                            "type": "string"
+                                                        },
+                                                        "message": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/index.php/apps/usage_statistics_server/api/{apiVersion}/reports": {
+            "post": {
+                "operationId": "report-create",
+                "summary": "Submit a usage statistics report as plain Protocol v1 JSON",
+                "description": "Stores one validated report for one application installation and reporting period. Repeating an already accepted report with the same schema version is idempotent.",
+                "tags": [
+                    "report"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "protocolVersion",
+                                    "application",
+                                    "installationId",
+                                    "schemaVersion",
+                                    "period",
+                                    "metrics"
+                                ],
+                                "properties": {
+                                    "protocolVersion": {
+                                        "type": "integer",
+                                        "format": "int64",
+                                        "description": "Usage statistics protocol version"
+                                    },
+                                    "application": {
+                                        "type": "string",
+                                        "description": "Stable application identifier"
+                                    },
+                                    "installationId": {
+                                        "type": "string",
+                                        "description": "Stable pseudonymous installation identifier"
+                                    },
+                                    "schemaVersion": {
+                                        "type": "integer",
+                                        "format": "int64",
+                                        "description": "Registered application schema version"
+                                    },
+                                    "period": {
+                                        "type": "object",
+                                        "description": "RFC3339 reporting period, start inclusive and end exclusive",
+                                        "required": [
+                                            "start",
+                                            "end"
+                                        ],
+                                        "properties": {
+                                            "start": {
+                                                "type": "string"
+                                            },
+                                            "end": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "metrics": {
+                                        "type": "array",
+                                        "description": "Aggregate metric values",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "category",
+                                                "key",
+                                                "type",
+                                                "value"
+                                            ],
+                                            "properties": {
+                                                "category": {
+                                                    "type": "string"
+                                                },
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "format": "int64"
+                                                        },
+                                                        {
+                                                            "type": "number",
+                                                            "format": "double"
+                                                        },
+                                                        {
+                                                            "type": "boolean"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Report accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "error",
+                                        "message"
+                                    ],
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflicting report for the reporting period",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "error",
+                                        "message"
+                                    ],
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": []
+}

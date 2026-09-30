@@ -12,18 +12,18 @@ namespace OCA\UsageStatisticsServer\Controller;
 use OCA\UsageStatisticsServer\Service\ConflictingReport;
 use OCA\UsageStatisticsServer\Service\InvalidReport;
 use OCA\UsageStatisticsServer\Service\ReportSubmissionService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AnonRateLimit;
-use OCP\AppFramework\Http\Attribute\FrontpageRoute;
+use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\OCSController;
 use OCP\IRequest;
 
 #[OpenAPI(tags: ['reports'])]
-final class ReportController extends Controller {
+final class OcsReportController extends OCSController {
     public function __construct(
         string $appName,
         IRequest $request,
@@ -33,10 +33,10 @@ final class ReportController extends Controller {
     }
 
     /**
-     * Submit a usage statistics report as plain Protocol v1 JSON
+     * Submit a usage statistics report through the Nextcloud OCS API
      *
-     * Stores one validated report for one application installation and reporting period.
-     * Repeating an already accepted report with the same schema version is idempotent.
+     * This endpoint has the same Protocol v1 request semantics as the plain JSON endpoint,
+     * but wraps the response using the standard Nextcloud OCS envelope.
      *
      * @param int $protocolVersion Usage statistics protocol version
      * @param string $application Stable application identifier
@@ -54,7 +54,7 @@ final class ReportController extends Controller {
     #[PublicPage]
     #[NoCSRFRequired]
     #[AnonRateLimit(limit: 60, period: 3600)]
-    #[FrontpageRoute(verb: 'POST', url: '/api/{apiVersion}/reports', requirements: ['apiVersion' => '(v1)'])]
+    #[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/reports', requirements: ['apiVersion' => '(v1)'])]
     public function create(
         int $protocolVersion,
         string $application,
