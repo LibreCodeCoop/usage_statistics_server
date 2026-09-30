@@ -9,12 +9,10 @@ declare(strict_types=1);
 
 namespace OCA\UsageStatisticsServer\Controller;
 
-use OCA\UsageStatisticsServer\Db\ReportRepository;
-use OCA\UsageStatisticsServer\Db\SchemaRepository;
 use OCA\UsageStatisticsServer\Service\ConflictingReport;
 use OCA\UsageStatisticsServer\Service\InvalidReport;
-use OCA\UsageStatisticsServer\Service\ReportFactory;
-use OCA\UsageStatisticsServer\Service\SchemaValidator;
+use OCA\UsageStatisticsServer\Service\ReportSubmissionService;
+use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AnonRateLimit;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
@@ -22,7 +20,6 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\AppFramework\Controller;
 use OCP\IRequest;
 
 #[OpenAPI(tags: ['reports'])]
@@ -30,16 +27,13 @@ final class ReportController extends Controller {
     public function __construct(
         string $appName,
         IRequest $request,
-        private readonly ReportFactory $factory,
-        private readonly ReportRepository $repository,
-        private readonly SchemaRepository $schemas,
-        private readonly SchemaValidator $schemaValidator,
+        private readonly ReportSubmissionService $submission,
     ) {
         parent::__construct($appName, $request);
     }
 
     /**
-     * Submit a usage statistics report
+     * Submit a usage statistics report as plain Protocol v1 JSON
      *
      * Stores one validated report for one application installation and reporting period.
      * Repeating an already accepted report with the same schema version is idempotent.
@@ -70,7 +64,7 @@ final class ReportController extends Controller {
         array $metrics,
     ): DataResponse {
         try {
-            $report = $this->factory->fromPayload([
+            $this->submission->submit([
                 'protocolVersion' => $protocolVersion,
                 'application' => $application,
                 'installationId' => $installationId,
@@ -78,12 +72,6 @@ final class ReportController extends Controller {
                 'period' => $period,
                 'metrics' => $metrics,
             ]);
-            $schema = $this->schemas->find($report->application, $report->schemaVersion);
-            if ($schema === null) {
-                throw new InvalidReport('Application schema is not registered.');
-            }
-            $this->schemaValidator->validateReport($report, $schema);
-            $this->repository->store($report);
         } catch (InvalidReport $e) {
             return new DataResponse(['error' => 'invalid_report', 'message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
         } catch (ConflictingReport $e) {
