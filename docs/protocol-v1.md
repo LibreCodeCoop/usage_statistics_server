@@ -21,6 +21,13 @@ Recommended endpoint shape:
 POST /api/v1/reports
 ```
 
+The reference Nextcloud implementation exposes two equivalent ingestion routes:
+
+- a plain HTTP/JSON route for protocol clients;
+- an OCS route for Nextcloud-native tooling and API discovery.
+
+Both accept the same Protocol v1 request fields. The plain route returns the Protocol v1 response body directly. The OCS route wraps the same application-level response in the standard Nextcloud OCS envelope. OCS is an implementation detail of the Nextcloud reference server and is not required by Protocol v1.
+
 The server SHOULD support idempotent resubmission of the same logical report.
 
 A successful submission, including an idempotent retry, returns the same application-level response:
