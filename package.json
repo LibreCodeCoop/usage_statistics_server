@@ -39,7 +39,7 @@
     "@nextcloud/stylelint-config": "^3.2.1",
     "@nextcloud/vite-config": "^3.0.0-beta.1",
     "@playwright/test": "^1.62.1",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.4",
     "@vitejs/plugin-vue": "^6.0.9",
     "@vitest/coverage-v8": "^5.0.2",
     "@vue/test-utils": "^2.5.1",
